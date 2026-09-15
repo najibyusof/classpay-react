@@ -1,0 +1,272 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { z } from 'zod';
+
+import { adminApi } from '../../api/adminApi';
+import { AppHeader, Button, ErrorState, Select, TextInput } from '../../components';
+import { colors, spacing, typography } from '../../theme';
+import { toApiError } from '../../types/api';
+import type { AdminClass, CreateClassRequest } from '../../types/admin';
+
+export const createClassSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a class name').max(150, 'Class name is too long'),
+  teacherName: z
+    .string()
+    .trim()
+    .min(1, 'Enter the teacher name')
+    .max(150, 'Teacher name is too long'),
+  dayOfWeek: z.string().min(1, 'Select a day'),
+  startTime: z.string().trim().min(1, 'Select a start time'),
+  recurrenceType: z.enum(['weekly', 'fortnightly', 'monthly']),
+  paymentAmount: z
+    .string()
+    .trim()
+    .min(1, 'Enter the payment amount')
+    .refine((value) => !Number.isNaN(Number(value)) && Number(value) >= 0, {
+      message: 'Enter a valid payment amount',
+    }),
+  description: z.string().trim().max(1000, 'Description is too long'),
+});
+
+type CreateClassFormValues = z.infer<typeof createClassSchema>;
+
+const dayOptions = [
+  { label: 'Sunday', value: '0' },
+  { label: 'Monday', value: '1' },
+  { label: 'Tuesday', value: '2' },
+  { label: 'Wednesday', value: '3' },
+  { label: 'Thursday', value: '4' },
+  { label: 'Friday', value: '5' },
+  { label: 'Saturday', value: '6' },
+] as const;
+
+const timeOptions = [
+  '08:00',
+  '09:00',
+  '10:00',
+  '11:00',
+  '12:00',
+  '14:00',
+  '15:00',
+  '16:00',
+  '17:00',
+  '20:00',
+  '21:00',
+].map((value) => ({ label: to12Hour(value), value }));
+
+const frequencyOptions = [
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Fortnightly', value: 'fortnightly' },
+  { label: 'Monthly', value: 'monthly' },
+] as const;
+
+function to12Hour(value: string) {
+  const [hour = 0, minute = 0] = value.split(':').map(Number);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${String(minute).padStart(2, '0')} ${period}`;
+}
+
+export function CreateClassScreen({
+  onBack,
+  onCreated,
+  organizationId,
+  organizationName,
+}: {
+  onBack: () => void;
+  onCreated: (classItem: AdminClass) => void;
+  organizationId: number | string;
+  organizationName: string;
+}) {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateClassFormValues>({
+    defaultValues: {
+      dayOfWeek: '1',
+      description: '',
+      name: '',
+      paymentAmount: '',
+      recurrenceType: 'weekly',
+      startTime: '10:00',
+      teacherName: '',
+    },
+    resolver: zodResolver(createClassSchema),
+  });
+
+  const onSubmit = handleSubmit(async (values) => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      const payload: CreateClassRequest = {
+        day_of_week: Number(values.dayOfWeek),
+        description: values.description || null,
+        name: values.name.trim(),
+        payment_amount: Number(values.paymentAmount),
+        recurrence_type: values.recurrenceType,
+        start_time: values.startTime,
+        teacher_name: values.teacherName.trim(),
+      };
+      const createdClass = await adminApi.createOrganizationClass(organizationId, payload);
+      Alert.alert('Class created', 'The class has been added to this organization.', [
+        { text: 'Done', onPress: () => onCreated(createdClass) },
+      ]);
+    } catch (error) {
+      setErrorMessage(toApiError(error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  });
+
+  return (
+    <View style={styles.flex}>
+      <AppHeader onBackPress={onBack} title="Create Class" />
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.sectionLabel}>Organization</Text>
+        <View style={styles.organizationCard}>
+          <Text style={styles.organizationName}>{organizationName}</Text>
+        </View>
+        {errorMessage ? <ErrorState message={errorMessage} /> : null}
+        <Text style={styles.sectionLabel}>Class Information</Text>
+        <View style={styles.form}>
+          <Controller
+            control={control}
+            name="name"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.name?.message}
+                label="Class Name *"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="e.g. Quran Class"
+                value={value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="teacherName"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.teacherName?.message}
+                label="Teacher Name *"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="e.g. Cikgu Ahmad"
+                value={value}
+              />
+            )}
+          />
+          <View style={styles.rowFields}>
+            <View style={styles.fieldHalf}>
+              <Controller
+                control={control}
+                name="dayOfWeek"
+                render={({ field: { onChange, value } }) => (
+                  <Select
+                    error={errors.dayOfWeek?.message}
+                    label="Day *"
+                    onValueChange={onChange}
+                    options={dayOptions}
+                    value={value}
+                  />
+                )}
+              />
+            </View>
+            <View style={styles.fieldHalf}>
+              <Controller
+                control={control}
+                name="startTime"
+                render={({ field: { onChange, value } }) => (
+                  <Select
+                    error={errors.startTime?.message}
+                    label="Time *"
+                    onValueChange={onChange}
+                    options={timeOptions}
+                    value={value}
+                  />
+                )}
+              />
+            </View>
+          </View>
+          <Controller
+            control={control}
+            name="recurrenceType"
+            render={({ field: { onChange, value } }) => (
+              <Select
+                error={errors.recurrenceType?.message}
+                label="Frequency *"
+                onValueChange={onChange}
+                options={frequencyOptions}
+                value={value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="description"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.description?.message}
+                label="Description"
+                multiline
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="Weekly class"
+                value={value}
+              />
+            )}
+          />
+        </View>
+        <Text style={styles.sectionLabel}>Payment Information</Text>
+        <View style={styles.form}>
+          <Controller
+            control={control}
+            name="paymentAmount"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.paymentAmount?.message}
+                keyboardType="decimal-pad"
+                label="Payment Amount (RM) *"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="50.00"
+                value={value}
+              />
+            )}
+          />
+        </View>
+        <Button
+          disabled={isSubmitting}
+          label="Create Class"
+          loading={isSubmitting}
+          onPress={onSubmit}
+          testID="create-class-submit"
+          variant="brand"
+        />
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: { backgroundColor: colors.background, flex: 1 },
+  container: { gap: spacing.lg, padding: spacing.lg },
+  sectionLabel: { ...typography.label, color: colors.text, fontWeight: '600' },
+  organizationCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: spacing.md,
+  },
+  organizationName: { ...typography.body, color: colors.text },
+  form: { gap: spacing.md },
+  rowFields: { flexDirection: 'row', gap: spacing.sm },
+  fieldHalf: { flex: 1 },
+});
