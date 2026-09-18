@@ -225,6 +225,15 @@ export const adminApi = {
     }
     return participants;
   },
+  getClassPaymentSchedules: async (classId: number | string): Promise<unknown[]> => {
+    const { data } = await apiClient.get<unknown>(`/classes/${classId}/payment-schedules`, {
+      params: { page: 1, per_page: 100 },
+    });
+    const payload = unwrapData(data);
+    if (Array.isArray(payload)) return payload;
+    if (isRecordValue(payload) && Array.isArray(payload.data)) return payload.data;
+    return [];
+  },
   addClassParticipant: async (
     classId: number | string,
     payload: AddClassParticipantRequest,
@@ -351,4 +360,8 @@ function unwrapData<Value>(value: Value | { data: Value }): Value {
     return value.data as Value;
   }
   return value;
+}
+
+function isRecordValue(value: unknown): value is { data?: unknown } {
+  return typeof value === 'object' && value !== null;
 }

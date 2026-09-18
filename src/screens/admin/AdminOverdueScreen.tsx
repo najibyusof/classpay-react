@@ -71,6 +71,16 @@ export function AdminOverdueScreen() {
     },
     enabled: classIds.length > 0,
   });
+  const schedulesQuery = useQuery({
+    queryKey: ['admin', 'overdue', 'schedules', classIds],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        classIds.map(async (id) => [id, await adminApi.getClassPaymentSchedules(id)] as const),
+      );
+      return new Map(entries);
+    },
+    enabled: classIds.length > 0,
+  });
 
   return (
     <View style={styles.flex}>
@@ -158,6 +168,7 @@ export function AdminOverdueScreen() {
             key={String(item.id ?? index)}
             onReminderSent={() => void overdueQuery.refetch()}
             participantPhone={findParticipantPhone(item, participantsQuery.data)}
+            scheduleParticipantPhone={findScheduleParticipantPhone(item, schedulesQuery.data)}
           />
         ))}
         {overdueQuery.hasNextPage ? (
@@ -178,10 +189,12 @@ function OverdueCard({
   item,
   onReminderSent,
   participantPhone,
+  scheduleParticipantPhone,
 }: {
   item: Record<string, unknown>;
   onReminderSent: () => void;
   participantPhone?: string;
+  scheduleParticipantPhone?: string;
 }) {
   const payer = getNestedName(item, ['class_participant', 'participant', 'user', 'payer']);
   const className = getNestedName(item, ['class']) ?? stringValue(item.class_name);
@@ -200,7 +213,16 @@ function OverdueCard({
         {daysOverdue ? <Text style={styles.overdueBadge}>{daysOverdue} days overdue</Text> : null}
       </View>
       <View style={styles.cardDetails}>
-        <Detail label="Phone" value={getNestedPhone(item) ?? participantPhone ?? '--'} />
+        <Detail
+          label="Phone"
+          value={
+            getParticipantPhone(item) ??
+            getNestedPhone(item) ??
+            scheduleParticipantPhone ??
+            participantPhone ??
+            '--'
+          }
+        />
         <Detail label="Due date" value={dueDate ?? '--'} />
         <Detail label="Amount" value={amount ? `MYR ${amount}` : '--'} />
       </View>
@@ -276,6 +298,12 @@ function getNestedPhone(item: Record<string, unknown>) {
   return findPhone(item);
 }
 
+function getParticipantPhone(item: Record<string, unknown>) {
+  const participant = item.participant;
+  if (!isRecord(participant)) return undefined;
+  return stringValue(participant.phone);
+}
+
 function findPhone(value: unknown, depth = 0): string | undefined {
   if (!isRecord(value) || depth > 3) return undefined;
   const phone = stringValue(value.phone);
@@ -298,6 +326,21 @@ function findParticipantPhone(
     .get(classId)
     ?.data.find((entry) => isRecord(entry) && String(entry.id) === participantId);
   return participant ? findPhone(participant) : undefined;
+}
+
+function findScheduleParticipantPhone(
+  item: Record<string, unknown>,
+  schedulesByClass?: Map<string, unknown[]>,
+) {
+  const classId = getRelatedId(item, 'class_id', 'class');
+  const participantId = getRelatedId(item, 'class_participant_id', 'class_participant');
+  if (!classId || !participantId || !schedulesByClass) return undefined;
+  const schedule = schedulesByClass.get(classId)?.find((entry) => {
+    if (!isRecord(entry)) return false;
+    return String(entry.class_participant_id) === participantId;
+  });
+  if (!isRecord(schedule) || !isRecord(schedule.participant)) return undefined;
+  return stringValue(schedule.participant.phone);
 }
 
 function getRelatedId(item: Record<string, unknown>, directKey: string, nestedKey: string) {
