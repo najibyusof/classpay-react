@@ -12,6 +12,7 @@ const tabIcons: Record<string, IconName> = {
   Management: 'people-outline',
   MyOrganizations: 'business-outline',
   Notifications: 'notifications-outline',
+  Overdue: 'alert-circle-outline',
   Organizations: 'business-outline',
   PaymentHistory: 'receipt-outline',
   Payments: 'receipt-outline',

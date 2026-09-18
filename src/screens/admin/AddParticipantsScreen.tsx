@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { adminApi } from '../../api/adminApi';
 import { Button, Card, EmptyState, ErrorState, Skeleton, TextInput } from '../../components';
@@ -10,15 +10,18 @@ import { normalizeApiError } from '../../types/api';
 import type { AdminParticipant } from '../../types/admin';
 import { confirmAction } from '../../utils/confirmAction';
 import { CreateParticipantScreen } from './CreateParticipantScreen';
+import { ParticipantDetailsScreen } from './ParticipantDetailsScreen';
 
 export function AddParticipantsScreen({
   classId,
   className,
   onBack,
+  onViewPayments,
 }: {
   classId: number | string;
   className: string;
   onBack: () => void;
+  onViewPayments: (participantId: number | string) => void;
 }) {
   const queryClient = useQueryClient();
   const [participantType, setParticipantType] = useState<'student' | 'sponsor'>('student');
@@ -28,6 +31,11 @@ export function AddParticipantsScreen({
   const [isAdding, setIsAdding] = useState(false);
   const [isCreatingParticipant, setIsCreatingParticipant] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [menuParticipant, setMenuParticipant] = useState<AdminParticipant | null>(null);
+  const [selectedParticipant, setSelectedParticipant] = useState<{
+    participant: AdminParticipant;
+    editing: boolean;
+  } | null>(null);
   const participantsQuery = useQuery({
     queryKey: ['admin', 'classes', classId, 'participants'],
     queryFn: () => adminApi.getClassParticipants(classId),
@@ -44,7 +52,8 @@ export function AddParticipantsScreen({
   const searchResult = peopleQuery.data?.[0];
   const visibleParticipants = participants.filter((participant) => {
     const type = participant.participant_type?.toLowerCase();
-    return !type || type === participantType;
+    const status = participant.status?.toLowerCase();
+    return status === 'active' && (!type || type === participantType);
   });
 
   const searchByPhone = () => {
@@ -77,6 +86,19 @@ export function AddParticipantsScreen({
     }
   };
 
+  const deleteParticipant = async () => {
+    if (!menuParticipant) return;
+    try {
+      await adminApi.deleteClassParticipant(classId, menuParticipant.id);
+      setMenuParticipant(null);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'classes', classId, 'participants'] });
+      Alert.alert('Participant removed', 'The participant was removed from this class.');
+    } catch (error) {
+      setErrorMessage(normalizeApiError(error).message);
+      setMenuParticipant(null);
+    }
+  };
+
   if (participantsQuery.isLoading) return <Skeleton height={420} />;
   if (participantsQuery.isError)
     return (
@@ -97,6 +119,23 @@ export function AddParticipantsScreen({
       />
     );
 
+  if (selectedParticipant)
+    return (
+      <ParticipantDetailsScreen
+        onBack={() => setSelectedParticipant(null)}
+        onViewPayments={() => {
+          const participantId = selectedParticipant.participant.user_id ?? selectedParticipant.participant.user?.id ?? selectedParticipant.participant.id;
+          onViewPayments(participantId);
+        }}
+        onUpdated={() => {
+          setSelectedParticipant(null);
+          void queryClient.invalidateQueries({ queryKey: ['admin', 'classes', classId, 'participants'] });
+        }}
+        participant={selectedParticipant.participant}
+        startEditing={selectedParticipant.editing}
+      />
+    );
+
   return (
     <View style={styles.flex}>
       <View style={styles.header}>
@@ -108,7 +147,7 @@ export function AddParticipantsScreen({
         >
           <Ionicons color={colors.text} name="arrow-back" size={22} />
         </Pressable>
-        <Text style={styles.headerTitle}>Add Participants</Text>
+        <Text style={styles.headerTitle}>View Participants</Text>
         <View style={styles.headerButton} />
       </View>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -213,11 +252,47 @@ export function AddParticipantsScreen({
         ) : (
           <View style={styles.list}>
             {visibleParticipants.map((participant, index) => (
-              <ParticipantRow index={index} key={participant.id} participant={participant} />
+              <ParticipantRow
+                index={index}
+                key={participant.id}
+                onMenu={() => setMenuParticipant(participant)}
+                participant={participant}
+              />
             ))}
           </View>
         )}
       </ScrollView>
+      <Modal
+        onRequestClose={() => setMenuParticipant(null)}
+        transparent
+        visible={Boolean(menuParticipant)}
+      >
+        <Pressable style={styles.menuBackdrop} onPress={() => setMenuParticipant(null)}>
+          <View style={styles.menu}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                if (menuParticipant) setSelectedParticipant({ editing: false, participant: menuParticipant });
+                setMenuParticipant(null);
+              }}
+              style={styles.menuItem}
+            ><Text style={styles.menuLabel}>View</Text></Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                if (menuParticipant) setSelectedParticipant({ editing: true, participant: menuParticipant });
+                setMenuParticipant(null);
+              }}
+              style={styles.menuItem}
+            ><Text style={styles.menuLabel}>Update</Text></Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => confirmAction({ confirmLabel: 'Delete', message: 'Remove this participant from the class?', onConfirm: () => void deleteParticipant(), title: 'Confirm delete' })}
+              style={styles.menuItem}
+            ><Text style={styles.deleteLabel}>Delete</Text></Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -243,7 +318,7 @@ function RoleTab({
   );
 }
 
-function ParticipantRow({ index, participant }: { index: number; participant: AdminParticipant }) {
+function ParticipantRow({ index, onMenu, participant }: { index: number; onMenu: () => void; participant: AdminParticipant }) {
   return (
     <Card>
       <View style={styles.participantRow}>
@@ -258,7 +333,9 @@ function ParticipantRow({ index, participant }: { index: number; participant: Ad
             {participant.user?.phone ?? participant.phone ?? `User ID: ${participant.user_id ?? participant.id}`}
           </Text>
         </View>
-        <Ionicons color={colors.mutedText} name="ellipsis-vertical" size={18} />
+        <Pressable accessibilityLabel="Participant options" accessibilityRole="button" onPress={onMenu} hitSlop={spacing.sm}>
+          <Ionicons color={colors.mutedText} name="ellipsis-vertical" size={18} />
+        </Pressable>
       </View>
     </Card>
   );
@@ -323,4 +400,9 @@ const styles = StyleSheet.create({
   participantCopy: { flex: 1, gap: spacing.xxs },
   participantName: { ...typography.label, color: colors.text },
   phone: { ...typography.caption, color: colors.mutedText },
+  menuBackdrop: { backgroundColor: colors.overlay, flex: 1, justifyContent: 'center', padding: spacing.xl },
+  menu: { alignSelf: 'flex-end', backgroundColor: colors.surface, borderRadius: radius.md, minWidth: 180, paddingVertical: spacing.xs },
+  menuItem: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  menuLabel: { ...typography.bodySmall, color: colors.text },
+  deleteLabel: { ...typography.bodySmall, color: colors.danger },
 });

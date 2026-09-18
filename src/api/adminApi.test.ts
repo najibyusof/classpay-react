@@ -1,17 +1,19 @@
 jest.mock('./client', () => ({
-  apiClient: { get: jest.fn(), patch: jest.fn(), post: jest.fn() },
+  apiClient: { delete: jest.fn(), get: jest.fn(), patch: jest.fn(), post: jest.fn() },
 }));
 
 import { adminApi } from './adminApi';
 import { apiClient } from './client';
 
 const get = apiClient.get as jest.Mock;
+const del = apiClient.delete as jest.Mock;
 const patch = apiClient.patch as jest.Mock;
 const post = apiClient.post as jest.Mock;
 
 describe('adminApi', () => {
   beforeEach(() => {
     get.mockReset();
+    del.mockReset();
     patch.mockReset();
     post.mockReset();
   });
@@ -183,10 +185,29 @@ describe('adminApi', () => {
     expect(patch).toHaveBeenCalledWith('/organizations/1/classes/10', {
       day_of_week: 1,
       name: 'Form 5 Advanced Physics',
-      payment_amount: 50,
-      recurrence_type: 'weekly',
-      start_time: '10:00',
+        payment_amount: 50,
+        recurrence_type: 'weekly',
+        start_time: '10:00',
       status: 'active',
+    });
+  });
+
+  it('updates a class schedule through the schedule endpoint', async () => {
+    patch.mockResolvedValue({
+      data: { data: { id: 22, class_id: 10, day_of_week: 2, start_time: '17:30' } },
+    });
+
+    await expect(
+      adminApi.updateClassSchedule(22, {
+        day_of_week: 2,
+        recurrence_type: 'fortnightly',
+        start_time: '17:30',
+      }),
+    ).resolves.toEqual({ id: 22, class_id: 10, day_of_week: 2, start_time: '17:30' });
+    expect(patch).toHaveBeenCalledWith('/class-schedules/22', {
+      day_of_week: 2,
+      recurrence_type: 'fortnightly',
+      start_time: '17:30',
     });
   });
 
@@ -293,6 +314,21 @@ describe('adminApi', () => {
     });
   });
 
+  it('updates a student profile', async () => {
+    patch.mockResolvedValue({ data: { data: { id: 12, name: 'Updated Student' } } });
+    await expect(adminApi.updateAdminStudent(12, { name: 'Updated Student' })).resolves.toEqual({
+      id: 12,
+      name: 'Updated Student',
+    });
+    expect(patch).toHaveBeenCalledWith('/admin/students/12', { name: 'Updated Student' });
+  });
+
+  it('removes a participant from a class', async () => {
+    del.mockResolvedValue({});
+    await expect(adminApi.deleteClassParticipant(10, 22)).resolves.toBeUndefined();
+    expect(del).toHaveBeenCalledWith('/admin/classes/10/participants/22');
+  });
+
   it('supports the legacy wrapped participants shape', async () => {
     get.mockResolvedValue({
       data: {
@@ -337,14 +373,64 @@ describe('adminApi', () => {
       .mockResolvedValue({ data: { data: {} } });
 
     await adminApi.getPayments(2);
+    await adminApi.getPayments(3, 92);
+    await adminApi.getPayments(4, undefined, 7);
+    await adminApi.getPayments(5, 92, 7, '2026-09-01', '2026-09-18');
     await adminApi.getPaymentSummary();
     await adminApi.getOutstandingReport();
     await adminApi.getOverdueReport();
 
     expect(get).toHaveBeenNthCalledWith(1, '/admin/payments', { params: { page: 2 } });
-    expect(get).toHaveBeenNthCalledWith(2, '/admin/reports/payment-summary');
-    expect(get).toHaveBeenNthCalledWith(3, '/admin/reports/outstanding');
-    expect(get).toHaveBeenNthCalledWith(4, '/admin/reports/overdue');
+    expect(get).toHaveBeenNthCalledWith(2, '/admin/payments', {
+      params: { page: 3, class_id: 92 },
+    });
+    expect(get).toHaveBeenNthCalledWith(3, '/admin/payments', {
+      params: { page: 4, organization_id: 7 },
+    });
+    expect(get).toHaveBeenNthCalledWith(4, '/admin/payments', {
+      params: { page: 5, class_id: 92, organization_id: 7, date_from: '2026-09-01', date_to: '2026-09-18' },
+    });
+    expect(get).toHaveBeenNthCalledWith(5, '/admin/reports/payment-summary');
+    expect(get).toHaveBeenNthCalledWith(6, '/admin/reports/outstanding');
+    expect(get).toHaveBeenNthCalledWith(7, '/admin/reports/overdue');
+  });
+
+  it('passes organization, class, and date filters to report endpoints', async () => {
+    get.mockResolvedValue({ data: { data: {} } });
+
+    const filters = {
+      class_id: 92,
+      date_from: '2026-09-01',
+      date_to: '2026-09-18',
+      organization_id: 7,
+    };
+    await adminApi.getPaymentSummary(filters);
+    await adminApi.getOutstandingReport(filters);
+    await adminApi.getOverdueReport(filters);
+
+    expect(get).toHaveBeenNthCalledWith(1, '/admin/reports/payment-summary', { params: filters });
+    expect(get).toHaveBeenNthCalledWith(2, '/admin/reports/outstanding', { params: filters });
+    expect(get).toHaveBeenNthCalledWith(3, '/admin/reports/overdue', { params: filters });
+  });
+
+  it('sends a reminder for an overdue payment schedule', async () => {
+    post.mockResolvedValue({ data: {} });
+
+    await expect(adminApi.sendPaymentScheduleReminder(1)).resolves.toBeUndefined();
+    expect(post).toHaveBeenCalledWith('/payment-schedules/1/reminder');
+  });
+
+  it('verifies a paid payment through the admin payment update endpoint', async () => {
+    patch.mockResolvedValue({
+      data: { data: { id: 501, amount: 80, status: 'verified' } },
+    });
+
+    await expect(adminApi.updatePayment(501, { status: 'verified' })).resolves.toEqual({
+      id: 501,
+      amount: 80,
+      status: 'verified',
+    });
+    expect(patch).toHaveBeenCalledWith('/payments/501', { status: 'verified' });
   });
 
   it('uploads an organization logo as multipart form data', async () => {

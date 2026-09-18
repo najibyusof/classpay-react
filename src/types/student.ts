@@ -54,6 +54,12 @@ export interface PaymentSchedule {
 export interface StudentPayment {
   id: number | string;
   amount: number;
+  payer?: {
+    id?: number | string;
+    name?: string | null;
+    phone?: string | null;
+  } | null;
+  organization?: { id: number | string; name: string } | null;
   reference_number?: string | null;
   class?: PaymentScheduleClass | string | null;
   payment_method?: string | null;

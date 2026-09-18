@@ -23,7 +23,7 @@ export function AdminDashboardScreen() {
   const organizationsQuery = useAdminOrganizations();
   const paymentSummaryQuery = useQuery({
     queryKey: ['admin', 'reports', 'payment-summary'],
-    queryFn: adminApi.getPaymentSummary,
+    queryFn: () => adminApi.getPaymentSummary(),
   });
 
   const dashboard = dashboardQuery.data ?? {};
@@ -157,8 +157,8 @@ export function AdminDashboardScreen() {
         />
         <QuickAction
           icon="paper-plane"
-          label="Send Reminder"
-          onPress={() => navigation.navigate('Management' as never)}
+          label="View Overdue"
+          onPress={() => navigation.navigate('Overdue')}
         />
       </View>
     </ScrollView>

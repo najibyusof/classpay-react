@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { ComponentProps } from 'react';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -29,12 +30,13 @@ import { OrganizationClassDetailScreen } from './OrganizationClassDetailScreen';
 import { EditClassScreen } from './EditClassScreen';
 import { AddParticipantsScreen } from './AddParticipantsScreen';
 import { OrganizationStudentsScreen } from './OrganizationStudentsScreen';
+import type { AdminTabParamList } from '../../navigation/AdminNavigator';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function OrganizationListScreen() {
   const queryClient = useQueryClient();
-  const navigation = useNavigation();
+  const navigation = useNavigation<BottomTabNavigationProp<AdminTabParamList>>();
   const [organization, setOrganization] = useState<AdminOrganization | null>(null);
   const [organizationClasses, setOrganizationClasses] = useState<AdminOrganization | null>(null);
   const [organizationToEdit, setOrganizationToEdit] = useState<AdminOrganization | null>(null);
@@ -118,6 +120,9 @@ export function OrganizationListScreen() {
         classId={classForParticipants.classId}
         className={classForParticipants.className}
         onBack={() => setClassForParticipants(null)}
+        onViewPayments={(participantId) =>
+          navigation.navigate('Payments', { participantId })
+        }
       />
     );
   if (classToView)
@@ -137,7 +142,7 @@ export function OrganizationListScreen() {
             organization: classToView.organization,
           })
         }
-        onViewPayments={() => navigation.navigate('Payments' as never)}
+        onViewPayments={() => navigation.navigate('Payments', { classId: classToView.classId })}
         organizationId={classToView.organization.id}
         organizationName={classToView.organization.name}
       />
@@ -327,7 +332,7 @@ function OrganizationDashboardScreen({
   onViewClasses: () => void;
   onViewStudents: () => void;
 }) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<BottomTabNavigationProp<AdminTabParamList>>();
   const organizationQuery = useQuery({
     queryKey: adminQueryKeys.organization(organization.id),
     queryFn: () => adminApi.getOrganization(organization.id),
@@ -452,7 +457,9 @@ function OrganizationDashboardScreen({
         <DetailAction
           icon="card-outline"
           label="View Payments"
-          onPress={() => navigation.navigate('Payments' as never)}
+          onPress={() =>
+            navigation.navigate('Payments', { organizationId: organizationDetails.id })
+          }
         />
         <DetailAction
           icon="settings-outline"

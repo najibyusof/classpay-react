@@ -12,7 +12,9 @@ describe('createClassSchema', () => {
         name: 'Quran Class',
         paymentAmount: '50.00',
         recurrenceType: 'weekly',
-        startTime: '10:00',
+        startHour: '10',
+        startMinute: '00',
+        startPeriod: 'AM',
         teacherName: 'Cikgu Ahmad',
       }).success,
     ).toBe(true);
@@ -29,7 +31,9 @@ describe('createClassSchema', () => {
         name: '',
         paymentAmount: 'abc',
         recurrenceType: 'weekly',
-        startTime: '10:00',
+        startHour: '10',
+        startMinute: '00',
+        startPeriod: 'AM',
         teacherName: '',
       }).success,
     ).toBe(false);

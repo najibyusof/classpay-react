@@ -74,11 +74,10 @@ export function OrganizationClassDetailScreen({
   if (!classQuery.data) return <Skeleton height={480} />;
   const classItem = classQuery.data;
   const qrCodeUri = `${environment.apiBaseUrl}/classes/${classId}/payment-setting/qr-code-file`;
-  const participantsTotal = (participantsQuery.data?.meta as { total?: unknown } | undefined)
-    ?.total;
-  const participantsListCount = participantsQuery.data?.data.length;
   const participantsCount =
-    typeof participantsTotal === 'number' ? participantsTotal : participantsListCount;
+    participantsQuery.data?.data.filter(
+      (participant) => participant.status?.toLowerCase() === 'active',
+    ).length ?? 0;
   const participantsError = participantsQuery.isError
     ? normalizeApiError(participantsQuery.error).message
     : null;
@@ -184,7 +183,7 @@ export function OrganizationClassDetailScreen({
             />
           </View>
         </View>
-        <Button label="Add Participants" onPress={onAddParticipants} variant="brand" />
+        <Button label="View Participants" onPress={onAddParticipants} variant="brand" />
         <Button label="View Payments" onPress={onViewPayments} variant="outline" />
       </ScrollView>
       <Modal
@@ -230,7 +229,7 @@ function ClassSummary({
     participantsCount ?? classItem.participants_count ?? classItem.students_count;
   const schedule = classItem.schedules?.[0];
   const dayOfWeek = schedule?.day_of_week ?? classItem.day_of_week;
-  const startTime = schedule?.start_time ?? classItem.start_time;
+  const startTime = classItem.start_time ?? schedule?.start_time;
   const recurrence = schedule?.recurrence_type ?? classItem.frequency;
   const dayTime =
     dayOfWeek !== undefined || startTime

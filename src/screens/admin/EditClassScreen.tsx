@@ -11,6 +11,13 @@ import { colors, radius, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
 import type { AdminClass, ClassQrCodeAsset } from '../../types/admin';
 import { confirmAction } from '../../utils/confirmAction';
+import {
+  classHourOptions,
+  classMinuteOptions,
+  classPeriodOptions,
+  parseClassTime,
+  toApiClassTime,
+} from '../../utils/classTime';
 
 export const editClassSchema = z.object({
   name: z.string().trim().min(1, 'Enter a class name').max(150, 'Class name is too long'),
@@ -18,7 +25,9 @@ export const editClassSchema = z.object({
   teacherName: z.string().trim().max(150, 'Teacher name is too long'),
   status: z.enum(['draft', 'active', 'inactive', 'completed']),
   dayOfWeek: z.string().optional(),
-  startTime: z.string().trim().optional(),
+  startHour: z.string().optional(),
+  startMinute: z.string().optional(),
+  startPeriod: z.enum(['AM', 'PM']).optional(),
   recurrenceType: z.enum(['weekly', 'fortnightly', 'monthly']).optional(),
   paymentAmount: z
     .string()
@@ -43,38 +52,11 @@ const dayOptions = [
   { label: 'Saturday', value: '6' },
 ] as const;
 
-const timeOptions = [
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '20:00',
-  '21:00',
-].map((value) => ({ label: to12Hour(value), value }));
-
 const frequencyOptions = [
   { label: 'Weekly', value: 'weekly' },
   { label: 'Fortnightly', value: 'fortnightly' },
   { label: 'Monthly', value: 'monthly' },
 ] as const;
-
-function to12Hour(value: string) {
-  const [hour = 0, minute = 0] = value.split(':').map(Number);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${String(minute).padStart(2, '0')} ${period}`;
-}
-
-function to24Hour(value?: string | null) {
-  if (!value) return undefined;
-  const [hour = 0, minute = 0] = value.split(':').map(Number);
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
 
 export function EditClassScreen({
   classItem,
@@ -89,6 +71,9 @@ export function EditClassScreen({
   organizationId: number | string;
   organizationName: string;
 }) {
+  const parsedClassTime = parseClassTime(
+    classItem.schedules?.[0]?.start_time ?? classItem.start_time,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [qrCodeAsset, setQrCodeAsset] = useState<ClassQrCodeAsset | null>(null);
@@ -119,7 +104,9 @@ export function EditClassScreen({
       recurrenceType: normalizeRecurrence(
         classItem.schedules?.[0]?.recurrence_type ?? classItem.frequency,
       ),
-      startTime: to24Hour(classItem.schedules?.[0]?.start_time ?? classItem.start_time),
+      startHour: parsedClassTime.hour,
+      startMinute: parsedClassTime.minute,
+      startPeriod: parsedClassTime.period,
       status: normalizeStatus(classItem.status),
       teacherName: classItem.teacher_name ?? '',
     },
@@ -136,7 +123,10 @@ export function EditClassScreen({
         name: values.name.trim(),
         payment_amount: values.paymentAmount ? Number(values.paymentAmount) : undefined,
         recurrence_type: values.recurrenceType,
-        start_time: values.startTime || undefined,
+        start_time:
+          values.startHour && values.startMinute && values.startPeriod
+            ? toApiClassTime(values.startHour, values.startMinute, values.startPeriod)
+            : undefined,
         status: values.status,
         teacher_name: values.teacherName.trim(),
       });
@@ -252,17 +242,49 @@ export function EditClassScreen({
                 )}
               />
             </View>
+          </View>
+          <View style={styles.dateRow}>
             <View style={styles.dateField}>
               <Controller
                 control={control}
-                name="startTime"
+                name="startHour"
                 render={({ field: { onChange, value } }) => (
                   <Select
-                    error={errors.startTime?.message}
-                    label="Time"
+                    error={errors.startHour?.message}
+                    label="Hour"
                     onValueChange={onChange}
-                    options={timeOptions}
-                    value={value ?? '10:00'}
+                    options={classHourOptions}
+                    value={value ?? '10'}
+                  />
+                )}
+              />
+            </View>
+            <View style={styles.dateField}>
+              <Controller
+                control={control}
+                name="startMinute"
+                render={({ field: { onChange, value } }) => (
+                  <Select
+                    error={errors.startMinute?.message}
+                    label="Minutes"
+                    onValueChange={onChange}
+                    options={classMinuteOptions}
+                    value={value ?? '00'}
+                  />
+                )}
+              />
+            </View>
+            <View style={styles.dateField}>
+              <Controller
+                control={control}
+                name="startPeriod"
+                render={({ field: { onChange, value } }) => (
+                  <Select
+                    error={errors.startPeriod?.message}
+                    label="AM/PM"
+                    onValueChange={onChange}
+                    options={classPeriodOptions}
+                    value={value ?? 'AM'}
                   />
                 )}
               />

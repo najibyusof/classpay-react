@@ -9,7 +9,13 @@ export const adminQueryKeys = {
     ['admin', 'organization', organizationId] as const,
   organizationDashboard: (organizationId: number | string) =>
     ['admin', 'organizations', organizationId, 'dashboard'] as const,
-  payments: ['admin', 'payments'] as const,
+  payments: (
+    classId?: number | string,
+    organizationId?: number | string,
+    participantId?: number | string,
+    dateFrom?: string,
+    dateTo?: string,
+  ) => ['admin', 'payments', classId ?? 'all', organizationId ?? 'all', participantId ?? 'all', dateFrom ?? 'all', dateTo ?? 'all'] as const,
   reports: ['admin', 'reports'] as const,
 };
 

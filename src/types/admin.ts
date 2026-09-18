@@ -56,6 +56,13 @@ export interface AdminClassSchedule {
   recurrence_type?: 'weekly' | 'fortnightly' | 'monthly' | string;
 }
 
+export interface ClassScheduleRequest {
+  day_of_week?: number;
+  start_time?: string;
+  end_time?: string | null;
+  recurrence_type?: 'weekly' | 'fortnightly' | 'monthly';
+}
+
 export interface AdminClassPaymentSetting {
   id?: number | string;
   class_id?: number | string;
@@ -162,6 +169,12 @@ export interface AdminPerson {
   status?: string | null;
 }
 
+export interface UpdateAdminPersonRequest {
+  name?: string;
+  phone?: string;
+  email?: string | null;
+}
+
 export interface AdminPersonListResponse {
   data: {
     students?: AdminPerson[];
@@ -181,6 +194,18 @@ export interface AdminPayment extends StudentPayment {
 
 export interface AdminReport {
   [key: string]: unknown;
+}
+
+export interface AdminReportFilters {
+  organization_id?: number | string;
+  class_id?: number | string;
+  participant_id?: number | string;
+  student_id?: number | string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  per_page?: number;
 }
 
 export function getAuthorizedOrganizations(value: unknown): AdminOrganization[] {

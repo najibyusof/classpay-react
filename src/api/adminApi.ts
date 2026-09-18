@@ -3,15 +3,19 @@ import { apiClient } from './client';
 import type {
   AdminDashboardData,
   ClassPaymentSettingRequest,
+  ClassScheduleRequest,
   AdminClass,
+  AdminClassSchedule,
   AdminClassListResponse,
   AdminParticipant,
+  UpdateAdminPersonRequest,
   AdminParticipantListResponse,
   AdminPerson,
   AdminPersonListResponse,
   AdminOrganizationListResponse,
   AdminPayment,
   AdminReport,
+  AdminReportFilters,
   UpdateOrganizationRequest,
   CreateClassRequest,
   CreateOrganizationRequest,
@@ -154,6 +158,15 @@ export const adminApi = {
     );
     return unwrapData(data);
   },
+  updateClassSchedule: async (
+    scheduleId: number | string,
+    payload: ClassScheduleRequest,
+  ): Promise<AdminClassSchedule> => {
+    const { data } = await apiClient.patch<
+      AdminClassSchedule | { data: AdminClassSchedule }
+    >(`/class-schedules/${scheduleId}`, payload);
+    return unwrapData(data);
+  },
   updateClassPaymentSetting: async (
     classId: number | string,
     payload: ClassPaymentSettingRequest,
@@ -182,17 +195,35 @@ export const adminApi = {
   },
   getClassParticipants: async (
     classId: number | string,
+    page = 1,
+    perPage = 20,
   ): Promise<PaginatedResponse<AdminParticipant>> => {
-    const { data } = await apiClient.get<AdminParticipantListResponse>(
-      `/admin/classes/${classId}/participants`,
-    );
+    const response = page === 1 && perPage === 20
+      ? await apiClient.get<AdminParticipantListResponse>(`/admin/classes/${classId}/participants`)
+      : await apiClient.get<AdminParticipantListResponse>(`/admin/classes/${classId}/participants`, {
+          params: { page, per_page: perPage },
+        });
+    const { data } = response;
     const payload = data.data;
     const participants = Array.isArray(payload) ? payload : (payload?.participants ?? []);
     const pagination = Array.isArray(payload) ? undefined : payload?.pagination;
     return {
       data: participants,
-      meta: pagination ?? { current_page: 1, last_page: 1 },
+      meta: pagination ?? { current_page: page, last_page: page },
     };
+  },
+  getAllClassParticipants: async (classId: number | string): Promise<AdminParticipant[]> => {
+    const participants: AdminParticipant[] = [];
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      const result = await adminApi.getClassParticipants(classId, page, 100);
+      participants.push(...result.data);
+      const lastPage = result.meta?.last_page ?? page;
+      hasMore = page < lastPage;
+      page += 1;
+    }
+    return participants;
   },
   addClassParticipant: async (
     classId: number | string,
@@ -200,6 +231,29 @@ export const adminApi = {
   ): Promise<AdminParticipant> => {
     const { data } = await apiClient.post<AdminParticipant | { data: AdminParticipant }>(
       `/admin/classes/${classId}/participants`,
+      payload,
+    );
+    return unwrapData(data);
+  },
+  deleteClassParticipant: async (classId: number | string, participantId: number | string) => {
+    await apiClient.delete(`/admin/classes/${classId}/participants/${participantId}`);
+  },
+  updateAdminStudent: async (
+    studentId: number | string,
+    payload: UpdateAdminPersonRequest,
+  ): Promise<AdminPerson> => {
+    const { data } = await apiClient.patch<AdminPerson | { data: AdminPerson }>(
+      `/admin/students/${studentId}`,
+      payload,
+    );
+    return unwrapData(data);
+  },
+  updateAdminSponsor: async (
+    sponsorId: number | string,
+    payload: UpdateAdminPersonRequest,
+  ): Promise<AdminPerson> => {
+    const { data } = await apiClient.patch<AdminPerson | { data: AdminPerson }>(
+      `/admin/sponsors/${sponsorId}`,
       payload,
     );
     return unwrapData(data);
@@ -234,20 +288,62 @@ export const adminApi = {
       meta: data.data.pagination ?? { current_page: page, last_page: page },
     };
   },
-  getPayments: async (page = 1): Promise<PaginatedResponse<AdminPayment>> => {
+  getPayments: async (
+    page = 1,
+    classId?: number | string,
+    organizationId?: number | string,
+    dateFrom?: string,
+    dateTo?: string,
+    participantId?: number | string,
+  ): Promise<PaginatedResponse<AdminPayment>> => {
     const { data } = await apiClient.get<PaymentHistoryResponse<AdminPayment>>('/admin/payments', {
-      params: { page },
+      params: {
+        page,
+        ...(classId === undefined ? {} : { class_id: classId }),
+        ...(organizationId === undefined ? {} : { organization_id: organizationId }),
+        ...(participantId === undefined ? {} : { participant_id: participantId }),
+        ...(dateFrom === undefined ? {} : { date_from: dateFrom }),
+        ...(dateTo === undefined ? {} : { date_to: dateTo }),
+      },
     });
     return { data: data.data.payments, meta: data.data.pagination };
   },
-  getPaymentSummary: () => getReport('/admin/reports/payment-summary'),
-  getOutstandingReport: () => getReport('/admin/reports/outstanding'),
-  getOverdueReport: () => getReport('/admin/reports/overdue'),
+  updatePayment: async (
+    paymentId: number | string,
+    payload: { status?: string; notes?: string | null },
+  ): Promise<AdminPayment> => {
+    const { data } = await apiClient.patch<AdminPayment | { data: AdminPayment }>(
+      `/payments/${paymentId}`,
+      payload,
+    );
+    return unwrapData(data);
+  },
+  getPaymentSummary: (filters?: AdminReportFilters) =>
+    getReport('/admin/reports/payment-summary', filters),
+  getOutstandingReport: (filters?: AdminReportFilters) =>
+    getReport('/admin/reports/outstanding', filters),
+  getOverdueReport: (filters?: AdminReportFilters) =>
+    getReport('/admin/reports/overdue', filters),
+  getOverduePayments: (filters?: AdminReportFilters) =>
+    getReportValue('/admin/reports/overdue', filters),
+  sendPaymentScheduleReminder: async (scheduleId: number | string): Promise<void> => {
+    await apiClient.post(`/payment-schedules/${scheduleId}/reminder`);
+  },
 };
 
-async function getReport(path: string): Promise<AdminReport> {
-  const { data } = await apiClient.get<AdminReport | { data: AdminReport }>(path);
+async function getReport(path: string, filters?: AdminReportFilters): Promise<AdminReport> {
+  const response = filters && Object.keys(filters).length > 0
+    ? await apiClient.get<AdminReport | { data: AdminReport }>(path, { params: filters })
+    : await apiClient.get<AdminReport | { data: AdminReport }>(path);
+  const { data } = response;
   return unwrapData(data);
+}
+
+async function getReportValue(path: string, filters?: AdminReportFilters): Promise<unknown> {
+  const response = filters && Object.keys(filters).length > 0
+    ? await apiClient.get<unknown>(path, { params: filters })
+    : await apiClient.get<unknown>(path);
+  return unwrapData(response.data as unknown);
 }
 
 function unwrapData<Value>(value: Value | { data: Value }): Value {

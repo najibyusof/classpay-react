@@ -10,6 +10,12 @@ import { colors, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
 import type { AdminClass, ClassQrCodeAsset, CreateClassRequest } from '../../types/admin';
 import { confirmAction } from '../../utils/confirmAction';
+import {
+  classHourOptions,
+  classMinuteOptions,
+  classPeriodOptions,
+  toApiClassTime,
+} from '../../utils/classTime';
 
 export const createClassSchema = z.object({
   name: z.string().trim().min(1, 'Enter a class name').max(150, 'Class name is too long'),
@@ -19,7 +25,9 @@ export const createClassSchema = z.object({
     .min(1, 'Enter the teacher name')
     .max(150, 'Teacher name is too long'),
   dayOfWeek: z.string().min(1, 'Select a day'),
-  startTime: z.string().trim().min(1, 'Select a start time'),
+  startHour: z.string().min(1, 'Select an hour'),
+  startMinute: z.string().min(1, 'Select minutes'),
+  startPeriod: z.enum(['AM', 'PM']),
   recurrenceType: z.enum(['weekly', 'fortnightly', 'monthly']),
   paymentAmount: z
     .string()
@@ -46,32 +54,11 @@ const dayOptions = [
   { label: 'Saturday', value: '6' },
 ] as const;
 
-const timeOptions = [
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '20:00',
-  '21:00',
-].map((value) => ({ label: to12Hour(value), value }));
-
 const frequencyOptions = [
   { label: 'Weekly', value: 'weekly' },
   { label: 'Fortnightly', value: 'fortnightly' },
   { label: 'Monthly', value: 'monthly' },
 ] as const;
-
-function to12Hour(value: string) {
-  const [hour = 0, minute = 0] = value.split(':').map(Number);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${hour12}:${String(minute).padStart(2, '0')} ${period}`;
-}
 
 export function CreateClassScreen({
   onBack,
@@ -101,7 +88,9 @@ export function CreateClassScreen({
       name: '',
       paymentAmount: '',
       recurrenceType: 'weekly',
-      startTime: '10:00',
+      startHour: '10',
+      startMinute: '00',
+      startPeriod: 'AM',
       teacherName: '',
     },
     resolver: zodResolver(createClassSchema),
@@ -117,7 +106,7 @@ export function CreateClassScreen({
         name: values.name.trim(),
         payment_amount: Number(values.paymentAmount),
         recurrence_type: values.recurrenceType,
-        start_time: values.startTime,
+        start_time: toApiClassTime(values.startHour, values.startMinute, values.startPeriod),
         teacher_name: values.teacherName.trim(),
       };
       const createdClass = await adminApi.createOrganizationClass(organizationId, payload);
@@ -196,16 +185,48 @@ export function CreateClassScreen({
                 )}
               />
             </View>
-            <View style={styles.fieldHalf}>
+          </View>
+          <View style={styles.rowFields}>
+            <View style={styles.fieldThird}>
               <Controller
                 control={control}
-                name="startTime"
+                name="startHour"
                 render={({ field: { onChange, value } }) => (
                   <Select
-                    error={errors.startTime?.message}
-                    label="Time *"
+                    error={errors.startHour?.message}
+                    label="Hour *"
                     onValueChange={onChange}
-                    options={timeOptions}
+                    options={classHourOptions}
+                    value={value}
+                  />
+                )}
+              />
+            </View>
+            <View style={styles.fieldThird}>
+              <Controller
+                control={control}
+                name="startMinute"
+                render={({ field: { onChange, value } }) => (
+                  <Select
+                    error={errors.startMinute?.message}
+                    label="Minutes *"
+                    onValueChange={onChange}
+                    options={classMinuteOptions}
+                    value={value}
+                  />
+                )}
+              />
+            </View>
+            <View style={styles.fieldThird}>
+              <Controller
+                control={control}
+                name="startPeriod"
+                render={({ field: { onChange, value } }) => (
+                  <Select
+                    error={errors.startPeriod?.message}
+                    label="AM/PM *"
+                    onValueChange={onChange}
+                    options={classPeriodOptions}
                     value={value}
                   />
                 )}
@@ -338,4 +359,5 @@ const styles = StyleSheet.create({
   form: { gap: spacing.md },
   rowFields: { flexDirection: 'row', gap: spacing.sm },
   fieldHalf: { flex: 1 },
+  fieldThird: { flex: 1 },
 });

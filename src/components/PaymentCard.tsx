@@ -8,7 +8,7 @@ import { DateText } from './DateText';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 
 interface PaymentCardProps {
-  payment: StudentPayment;
+  payment: StudentPayment & { organization?: { name: string } | null };
   onPress: () => void;
 }
 
@@ -30,6 +30,11 @@ export function PaymentCard({ payment, onPress }: PaymentCardProps) {
             {payment.reference_number ?? `Payment ${payment.id}`}
           </Text>
           <Text style={styles.className}>{className}</Text>
+          {payment.organization?.name ? (
+            <Text style={styles.organizationName}>{payment.organization.name}</Text>
+          ) : null}
+          {payment.payer?.name ? <Text style={styles.payer}>{payment.payer.name}</Text> : null}
+          {payment.payer?.phone ? <Text style={styles.payer}>{payment.payer.phone}</Text> : null}
         </View>
         <PaymentStatusBadge status={payment.status} />
       </View>
@@ -54,6 +59,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between' },
   reference: { ...typography.label, color: colors.text },
   className: { ...typography.caption, color: colors.mutedText, marginTop: spacing.xxs },
+  organizationName: { ...typography.caption, color: colors.mutedText, marginTop: spacing.xxs },
+  payer: { ...typography.caption, color: colors.mutedText, marginTop: spacing.xxs },
   footer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm },
   method: { ...typography.bodySmall, color: colors.mutedText, textTransform: 'capitalize' },
   amounts: { alignItems: 'flex-end', gap: spacing.xxs },
