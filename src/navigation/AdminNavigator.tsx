@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { AdminManagementScreen } from '../screens/admin/AdminManagementScreen';
+import type { ManagementArea } from '../screens/admin/AdminManagementScreen';
 import { AdminPaymentsScreen } from '../screens/admin/AdminPaymentsScreen';
 import { AdminReportsScreen } from '../screens/admin/AdminReportsScreen';
 import { OrganizationListScreen } from '../screens/admin/OrganizationListScreen';
@@ -13,7 +14,7 @@ export type AdminTabParamList = {
   Organizations: undefined;
   Payments: undefined;
   Reports: undefined;
-  Management: undefined;
+  Management: { initialArea?: ManagementArea } | undefined;
 };
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
@@ -31,7 +32,9 @@ export function AdminNavigator() {
       <Tab.Screen component={OrganizationListScreen} name="Organizations" />
       <Tab.Screen component={AdminPaymentsScreen} name="Payments" />
       <Tab.Screen component={AdminReportsScreen} name="Reports" />
-      <Tab.Screen component={AdminManagementScreen} name="Management" options={{ title: 'More' }} />
+      <Tab.Screen name="Management" options={{ title: 'More' }}>
+        {({ route }) => <AdminManagementScreen initialArea={route.params?.initialArea} />}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

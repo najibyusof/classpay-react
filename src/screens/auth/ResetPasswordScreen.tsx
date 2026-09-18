@@ -18,6 +18,7 @@ import { authApi } from '../../api/authApi';
 import { Button, ErrorState, PasswordInput, TextInput } from '../../components';
 import { colors, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
+import { confirmAction } from '../../utils/confirmAction';
 
 export const resetPasswordSchema = z
   .object({
@@ -155,7 +156,14 @@ export function ResetPasswordScreen({ onBack }: { onBack: () => void }) {
           icon="lock-open-outline"
           label="Reset password"
           loading={isSubmitting}
-          onPress={onSubmit}
+          onPress={() =>
+            confirmAction({
+              confirmLabel: 'Reset',
+              message: 'Reset this account password?',
+              onConfirm: onSubmit,
+              title: 'Confirm update',
+            })
+          }
           testID="reset-password-submit"
           variant="brand"
         />

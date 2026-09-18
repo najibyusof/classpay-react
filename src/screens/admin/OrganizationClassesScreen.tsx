@@ -25,9 +25,10 @@ export function OrganizationClassesScreen({
     queryKey: ['admin', 'organizations', organizationId, 'classes'],
     queryFn: ({ pageParam }) => adminApi.getOrganizationClasses(organizationId, pageParam),
     initialPageParam: 1,
+    refetchOnMount: 'always',
     getNextPageParam: (lastPage) =>
-      lastPage.meta.current_page < lastPage.meta.last_page
-        ? lastPage.meta.current_page + 1
+      (lastPage.meta?.current_page ?? 1) < (lastPage.meta?.last_page ?? 1)
+        ? (lastPage.meta?.current_page ?? 1) + 1
         : undefined,
   });
   const classes = classesQuery.data?.pages.flatMap((page) => page.data) ?? [];

@@ -28,7 +28,6 @@ export const loginSchema = z.object({
       'Enter a valid Malaysian phone number',
     ),
   password: z.string().min(1, 'Enter your password'),
-  deviceName: z.string().trim().min(1, 'Enter this device name'),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -52,7 +51,6 @@ export function LoginScreen({
     formState: { errors },
   } = useForm<LoginFormValues>({
     defaultValues: {
-      deviceName: '',
       password: '',
       phone: '',
     },
@@ -66,7 +64,7 @@ export function LoginScreen({
     if (!phone) {
       return;
     }
-    await login({ device_name: values.deviceName, password: values.password, phone });
+    await login({ device_name: '-', password: values.password, phone });
   });
 
   return (
@@ -189,20 +187,6 @@ function LoginFields({
             label="Password"
             onBlur={onBlur}
             onChangeText={onChange}
-            value={value}
-          />
-        )}
-      />
-      <Controller
-        control={control}
-        name="deviceName"
-        render={({ field: { onBlur, onChange, value } }) => (
-          <TextInput
-            error={errors.deviceName?.message ?? validationErrors.device_name?.[0]}
-            label="Device name"
-            onBlur={onBlur}
-            onChangeText={onChange}
-            placeholder={Platform.OS === 'ios' ? 'e.g. iPhone 15 Pro' : 'e.g. Android device'}
             value={value}
           />
         )}

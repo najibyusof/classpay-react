@@ -5,10 +5,11 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import { adminApi } from '../../api/adminApi';
-import { AppHeader, Button, ErrorState, Select, TextInput } from '../../components';
+import { AppHeader, Button, ClassQrCodePicker, ErrorState, Select, TextInput } from '../../components';
 import { colors, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
-import type { AdminClass, CreateClassRequest } from '../../types/admin';
+import type { AdminClass, ClassQrCodeAsset, CreateClassRequest } from '../../types/admin';
+import { confirmAction } from '../../utils/confirmAction';
 
 export const createClassSchema = z.object({
   name: z.string().trim().min(1, 'Enter a class name').max(150, 'Class name is too long'),
@@ -28,6 +29,9 @@ export const createClassSchema = z.object({
       message: 'Enter a valid payment amount',
     }),
   description: z.string().trim().max(1000, 'Description is too long'),
+  bankName: z.string().trim().max(100, 'Bank name is too long'),
+  bankAccountName: z.string().trim().max(150, 'Account name is too long'),
+  bankAccountNumber: z.string().trim().max(100, 'Account number is too long'),
 });
 
 type CreateClassFormValues = z.infer<typeof createClassSchema>;
@@ -82,12 +86,16 @@ export function CreateClassScreen({
 }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [qrCodeAsset, setQrCodeAsset] = useState<ClassQrCodeAsset | null>(null);
   const {
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<CreateClassFormValues>({
     defaultValues: {
+      bankAccountName: '',
+      bankAccountNumber: '',
+      bankName: '',
       dayOfWeek: '1',
       description: '',
       name: '',
@@ -113,6 +121,16 @@ export function CreateClassScreen({
         teacher_name: values.teacherName.trim(),
       };
       const createdClass = await adminApi.createOrganizationClass(organizationId, payload);
+      if (values.bankName || values.bankAccountName || values.bankAccountNumber) {
+        await adminApi.updateClassPaymentSetting(createdClass.id, {
+          bank_account_name: values.bankAccountName || null,
+          bank_account_number: values.bankAccountNumber || null,
+          bank_name: values.bankName || null,
+        });
+      }
+      if (qrCodeAsset) {
+        await adminApi.uploadClassPaymentQrCode(createdClass.id, qrCodeAsset);
+      }
       Alert.alert('Class created', 'The class has been added to this organization.', [
         { text: 'Done', onPress: () => onCreated(createdClass) },
       ]);
@@ -240,12 +258,63 @@ export function CreateClassScreen({
               />
             )}
           />
+          <Controller
+            control={control}
+            name="bankName"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.bankName?.message}
+                label="Bank Name"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="e.g. Maybank"
+                value={value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="bankAccountName"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.bankAccountName?.message}
+                label="Account Name"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="e.g. Pusat Tuisyen ClassPay"
+                value={value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="bankAccountNumber"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.bankAccountNumber?.message}
+                keyboardType="number-pad"
+                label="Account Number"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="551234567890"
+                value={value}
+              />
+            )}
+          />
+          <ClassQrCodePicker onChange={setQrCodeAsset} value={qrCodeAsset} />
         </View>
         <Button
           disabled={isSubmitting}
           label="Create Class"
           loading={isSubmitting}
-          onPress={onSubmit}
+          onPress={() =>
+            confirmAction({
+              confirmLabel: 'Create',
+              message: 'Create this class?',
+              onConfirm: onSubmit,
+              title: 'Confirm create',
+            })
+          }
           testID="create-class-submit"
           variant="brand"
         />

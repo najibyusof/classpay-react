@@ -18,7 +18,6 @@ describe('LoginScreen', () => {
   it('rejects a missing password before login is submitted', () => {
     expect(
       loginSchema.safeParse({
-        deviceName: 'ClassPay test device',
         password: '',
         phone: '0123456789',
       }).success,

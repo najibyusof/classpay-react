@@ -1,15 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, EmptyState, LogoutConfirmation, Select, TextInput } from '../../components';
+import {
+  Button,
+  Card,
+  EmptyState,
+  LogoutConfirmation,
+  OrganizationLogoPicker,
+  Select,
+  TextInput,
+} from '../../components';
 import { colors, radius, spacing, typography } from '../../theme';
 import { adminApi } from '../../api/adminApi';
 import { useAuthStore } from '../../store/authStore';
 import { toApiError } from '../../types/api';
 import type { AdminOrganization } from '../../types/admin';
+import type { OrganizationLogoAsset } from '../../types/admin';
+import { confirmAction } from '../../utils/confirmAction';
 
-type ManagementArea = 'organization' | 'class' | 'participants' | 'reminders';
+export type ManagementArea = 'organization' | 'class' | 'participants' | 'reminders';
 
 interface AdminManagementScreenProps {
   initialArea?: ManagementArea;
@@ -26,6 +36,10 @@ export function AdminManagementScreen({
   const [isLogoutVisible, setIsLogoutVisible] = useState(false);
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const logout = useAuthStore((state) => state.logout);
+
+  useEffect(() => {
+    if (initialArea) setActiveArea(initialArea);
+  }, [initialArea]);
 
   if (activeArea) {
     return (
@@ -82,14 +96,38 @@ function AdminFormShell({
   onOrganizationCreated?: (organization: AdminOrganization) => void;
 }) {
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Button fullWidth={false} label="Back to management" onPress={onBack} variant="ghost" />
-      {area === 'organization' ? <OrganizationForm onCreated={onOrganizationCreated} /> : null}
-      {area === 'class' ? <ClassForm /> : null}
-      {area === 'participants' ? <ParticipantForm /> : null}
-      {area === 'reminders' ? <ReminderForm /> : null}
-    </ScrollView>
+    <View style={styles.flex}>
+      <View style={styles.header}>
+        <Pressable
+          accessibilityLabel="Back to management"
+          accessibilityRole="button"
+          hitSlop={spacing.sm}
+          onPress={onBack}
+          style={styles.headerButton}
+        >
+          <Ionicons color={colors.text} name="arrow-back" size={22} />
+        </Pressable>
+        <Text style={styles.headerTitle}>{formTitleForArea(area)}</Text>
+        <View style={styles.headerButton} />
+      </View>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        {area === 'organization' ? <OrganizationForm onCreated={onOrganizationCreated} /> : null}
+        {area === 'class' ? <ClassForm /> : null}
+        {area === 'participants' ? <ParticipantForm /> : null}
+        {area === 'reminders' ? <ReminderForm /> : null}
+      </ScrollView>
+    </View>
   );
+}
+
+function formTitleForArea(area: ManagementArea) {
+  const titles: Record<ManagementArea, string> = {
+    organization: 'Add Organization',
+    class: 'Class Management',
+    participants: 'Participants',
+    reminders: 'Reminders',
+  };
+  return titles[area];
 }
 
 function OrganizationForm({
@@ -100,7 +138,7 @@ function OrganizationForm({
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
-  const [logoPath, setLogoPath] = useState('');
+  const [logoAsset, setLogoAsset] = useState<OrganizationLogoAsset | null>(null);
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,13 +148,15 @@ function OrganizationForm({
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      const organization = await adminApi.createOrganization({
+      let organization = await adminApi.createOrganization({
         code: code.trim() || null,
         description: description.trim() || null,
-        logo_path: logoPath.trim() || null,
         name: name.trim(),
         status,
       });
+      if (logoAsset) {
+        organization = await adminApi.uploadOrganizationLogo(organization.id, logoAsset);
+      }
       Alert.alert('Organization created', 'The organization has been created successfully.', [
         { text: 'Done', onPress: () => onCreated?.(organization) },
       ]);
@@ -151,30 +191,7 @@ function OrganizationForm({
         placeholder="Brief description about the organization"
         value={description}
       />
-      <TextInput
-        autoCapitalize="none"
-        label="Logo Path (Optional)"
-        onChangeText={setLogoPath}
-        placeholder="organizations/alhuda/logo.png"
-        value={logoPath}
-      />
-      <View style={styles.logoSection}>
-        <Text style={styles.fieldLabel}>Logo (Optional)</Text>
-        <Pressable
-          accessibilityLabel="Upload organization logo"
-          accessibilityRole="button"
-          onPress={() =>
-            Alert.alert(
-              'Logo upload',
-              'Logo upload will be available when media support is connected.',
-            )
-          }
-          style={styles.logoDropzone}
-        >
-          <Ionicons color={colors.mutedText} name="image-outline" size={25} />
-          <Text style={styles.logoHint}>Tap to upload logo</Text>
-        </Pressable>
-      </View>
+      <OrganizationLogoPicker onChange={setLogoAsset} value={logoAsset} />
       <View style={styles.statusSection}>
         <Text style={styles.fieldLabel}>Status</Text>
         <View style={styles.statusOptions}>
@@ -198,7 +215,14 @@ function OrganizationForm({
         disabled={!name.trim() || isSubmitting}
         label="Create Organization"
         loading={isSubmitting}
-        onPress={() => void createOrganization()}
+        onPress={() =>
+          confirmAction({
+            confirmLabel: 'Create',
+            message: 'Create this organization?',
+            onConfirm: () => void createOrganization(),
+            title: 'Confirm create',
+          })
+        }
         variant="brand"
       />
     </View>
@@ -366,6 +390,19 @@ const channelOptions = [
 ] as const;
 
 const styles = StyleSheet.create({
+  flex: { backgroundColor: colors.background, flex: 1 },
+  header: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 64,
+    paddingHorizontal: spacing.md,
+  },
+  headerButton: { alignItems: 'center', height: 40, justifyContent: 'center', width: 40 },
+  headerTitle: { ...typography.title, color: colors.text },
   container: {
     backgroundColor: colors.background,
     flexGrow: 1,

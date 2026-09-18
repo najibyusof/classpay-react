@@ -17,13 +17,13 @@ export function AccountSettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Account settings</Text>
+      <Text style={styles.title}>Tetapan akaun</Text>
       <Button
-        label="Change password"
+        label="Tukar kata laluan"
         onPress={() => setIsChangingPassword(true)}
         variant="outline"
       />
-      <Button label="Sign out" onPress={() => setIsLogoutVisible(true)} variant="danger" />
+      <Button label="Log keluar" onPress={() => setIsLogoutVisible(true)} variant="danger" />
       <LogoutConfirmation
         isLoggingOut={isLoggingOut}
         onCancel={() => setIsLogoutVisible(false)}

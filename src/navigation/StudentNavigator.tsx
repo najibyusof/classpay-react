@@ -3,8 +3,8 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useEffect } from 'react';
 
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
-import { PaymentScheduleListScreen } from '../screens/payment-schedules/PaymentScheduleListScreen';
-import { PaymentHistoryScreen } from '../screens/payment-history/PaymentHistoryScreen';
+import { MyOrganizationsScreen } from '../screens/student/MyOrganizationsScreen';
+import { StudentClassesScreen } from '../screens/student/StudentClassesScreen';
 import { NotificationsScreen } from '../screens/notifications/NotificationsScreen';
 import { NotificationBell } from '../components';
 import { colors } from '../theme';
@@ -15,8 +15,8 @@ import { AccountSettingsScreen } from '../screens/account/AccountSettingsScreen'
 
 export type StudentTabParamList = {
   Dashboard: undefined;
-  PaymentSchedules: undefined;
-  PaymentHistory: undefined;
+  Classes: undefined;
+  MyOrganizations: undefined;
   Notifications: undefined;
   Profile: undefined;
   Settings: undefined;
@@ -36,24 +36,28 @@ export function StudentNavigator() {
       })}
       tabBar={(props) => <StudentTabBar {...props} />}
     >
-      <Tab.Screen component={StudentDashboardScreen} name="Dashboard" />
       <Tab.Screen
-        component={() => <PaymentScheduleListScreen audience="student" />}
-        name="PaymentSchedules"
-        options={{ title: 'Schedules' }}
+        component={StudentDashboardScreen}
+        name="Dashboard"
+        options={{ title: 'Utama' }}
       />
       <Tab.Screen
-        component={() => <PaymentHistoryScreen audience="student" />}
-        name="PaymentHistory"
-        options={{ title: 'History' }}
+        component={StudentClassesScreen}
+        name="Classes"
+        options={{ title: 'Kelas' }}
+      />
+      <Tab.Screen
+        component={MyOrganizationsScreen}
+        name="MyOrganizations"
+        options={{ title: 'Organisasi' }}
       />
       <Tab.Screen
         component={NotificationsScreen}
         name="Notifications"
-        options={{ title: 'Alerts' }}
+        options={{ title: 'Notifikasi' }}
       />
-      <Tab.Screen component={ProfileScreen} name="Profile" />
-      <Tab.Screen component={AccountSettingsScreen} name="Settings" />
+      <Tab.Screen component={ProfileScreen} name="Profile" options={{ title: 'Profil' }} />
+      <Tab.Screen component={AccountSettingsScreen} name="Settings" options={{ title: 'Tetapan' }} />
     </Tab.Navigator>
   );
 }

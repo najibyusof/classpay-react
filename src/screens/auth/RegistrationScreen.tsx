@@ -18,6 +18,7 @@ import { Button, ErrorState, PasswordInput, TextInput } from '../../components';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import type { RegistrationUserType } from '../../types/auth';
+import { confirmAction } from '../../utils/confirmAction';
 import { normalizeMalaysianPhoneNumber } from '../../utils/phone';
 
 export const registrationSchema = z
@@ -76,7 +77,7 @@ export function RegistrationScreen({ onBack }: { onBack: () => void }) {
 
   useEffect(() => clearError, [clearError]);
 
-  const onSubmit = handleSubmit(async (values) => {
+  const createAccount = async (values: RegistrationFormValues) => {
     const phone = normalizeMalaysianPhoneNumber(values.phone);
     if (!phone) return;
 
@@ -96,7 +97,16 @@ export function RegistrationScreen({ onBack }: { onBack: () => void }) {
         [{ text: 'Log in', onPress: onBack }],
       );
     }
-  });
+  };
+
+  const onSubmit = handleSubmit((values) =>
+    confirmAction({
+      confirmLabel: 'Create',
+      message: 'Create this account?',
+      onConfirm: () => void createAccount(values),
+      title: 'Confirm create',
+    }),
+  );
 
   const copy = roleCopy[role];
   return (

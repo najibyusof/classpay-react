@@ -24,7 +24,7 @@ export function AdditionalInfaqInput({
 }: AdditionalInfaqInputProps) {
   const hint = allowed
     ? getInfaqHint(currency, minimum, maximum)
-    : 'Additional infaq is not available for this schedule.';
+    : 'Sumbangan infaq tidak tersedia untuk jadual ini.';
 
   return (
     <TextInput
@@ -32,7 +32,7 @@ export function AdditionalInfaqInput({
       error={error}
       hint={hint}
       keyboardType="decimal-pad"
-      label="Additional infaq"
+      label="Sumbangan infaq"
       onChangeText={onChangeText}
       placeholder="0.00"
       value={allowed ? value : '0'}
@@ -46,11 +46,11 @@ function getInfaqHint(
   maximum?: MonetaryValue | null,
 ): string {
   if (minimum !== undefined && minimum !== null && maximum !== undefined && maximum !== null) {
-    return `Between ${formatCurrency(minimum, currency)} and ${formatCurrency(maximum, currency)}.`;
+    return `Antara ${formatCurrency(minimum, currency)} dan ${formatCurrency(maximum, currency)}.`;
   }
   if (minimum !== undefined && minimum !== null)
     return `Minimum ${formatCurrency(minimum, currency)}.`;
   if (maximum !== undefined && maximum !== null)
-    return `Maximum ${formatCurrency(maximum, currency)}.`;
-  return 'Optional amount. Enter up to two decimal places.';
+    return `Maksimum ${formatCurrency(maximum, currency)}.`;
+  return 'Jumlah pilihan. Masukkan sehingga dua tempat perpuluhan.';
 }

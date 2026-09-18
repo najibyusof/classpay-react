@@ -4,6 +4,9 @@ describe('createClassSchema', () => {
   it('accepts a valid class payload with schedule and payment', () => {
     expect(
       createClassSchema.safeParse({
+        bankAccountName: 'Padat Education',
+        bankAccountNumber: '1234567890',
+        bankName: 'Maybank',
         dayOfWeek: '1',
         description: '',
         name: 'Quran Class',
@@ -18,6 +21,9 @@ describe('createClassSchema', () => {
   it('requires name, teacher, and a valid payment amount', () => {
     expect(
       createClassSchema.safeParse({
+        bankAccountName: '',
+        bankAccountNumber: '',
+        bankName: '',
         dayOfWeek: '1',
         description: '',
         name: '',

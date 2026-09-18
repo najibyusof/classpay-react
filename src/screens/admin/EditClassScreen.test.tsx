@@ -4,6 +4,9 @@ describe('editClassSchema', () => {
   it('accepts documented class update fields with schedule and payment', () => {
     expect(
       editClassSchema.safeParse({
+        bankAccountName: 'Padat Education',
+        bankAccountNumber: '1234567890',
+        bankName: 'Maybank',
         dayOfWeek: '1',
         description: 'Updated weekly SPM Physics class',
         name: 'Form 5 Advanced Physics',
@@ -19,6 +22,9 @@ describe('editClassSchema', () => {
   it('rejects an invalid payment amount', () => {
     expect(
       editClassSchema.safeParse({
+        bankAccountName: '',
+        bankAccountNumber: '',
+        bankName: '',
         description: '',
         name: 'Physics',
         paymentAmount: 'abc',

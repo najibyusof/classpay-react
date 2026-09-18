@@ -33,8 +33,8 @@ export function SponsorDashboardScreen() {
     queryFn: ({ pageParam }) => sponsorApi.getPaymentSchedules(pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.meta.current_page < lastPage.meta.last_page
-        ? lastPage.meta.current_page + 1
+      (lastPage.meta?.current_page ?? 1) < (lastPage.meta?.last_page ?? 1)
+        ? (lastPage.meta?.current_page ?? 1) + 1
         : undefined,
   });
   const currentSchedulesQuery = useQuery({
@@ -46,8 +46,8 @@ export function SponsorDashboardScreen() {
     queryFn: ({ pageParam }) => sponsorApi.getPayments(pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.meta.current_page < lastPage.meta.last_page
-        ? lastPage.meta.current_page + 1
+      (lastPage.meta?.current_page ?? 1) < (lastPage.meta?.last_page ?? 1)
+        ? (lastPage.meta?.current_page ?? 1) + 1
         : undefined,
   });
   const schedules = schedulesQuery.data?.pages.flatMap((page) => page.data) ?? [];

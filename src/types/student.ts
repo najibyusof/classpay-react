@@ -6,6 +6,25 @@ export interface PaymentScheduleClass {
   name: string;
 }
 
+export interface StudentClass {
+  id: number | string;
+  organization_id?: number | string;
+  name: string;
+  description?: string | null;
+  teacher_name?: string | null;
+  day_of_week?: number;
+  start_time?: string | null;
+  frequency?: 'weekly' | 'fortnightly' | 'monthly' | string;
+  payment_amount?: number | string | null;
+  status?: string | null;
+  organization?: { id: number | string; name: string } | null;
+}
+
+export interface StudentOrganization {
+  id: number | string;
+  name: string;
+}
+
 export type PaymentOption =
   | string
   | {

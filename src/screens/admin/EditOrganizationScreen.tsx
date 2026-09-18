@@ -1,20 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import { adminApi } from '../../api/adminApi';
-import { AppHeader, Button, ErrorState, TextInput } from '../../components';
+import { AppHeader, Button, ErrorState, OrganizationLogoPicker, TextInput } from '../../components';
 import { colors, radius, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
 import type { AdminOrganization } from '../../types/admin';
+import type { OrganizationLogoAsset } from '../../types/admin';
+import { confirmAction } from '../../utils/confirmAction';
 
 export const editOrganizationSchema = z.object({
   name: z.string().trim().min(1, 'Enter an organization name').max(200, 'Name is too long'),
   code: z.string().trim().max(50, 'Code is too long'),
   description: z.string().trim().max(1000, 'Description is too long'),
-  logoPath: z.string().trim().max(500, 'Logo path is too long'),
   status: z.enum(['active', 'inactive']),
 });
 
@@ -31,6 +33,14 @@ export function EditOrganizationScreen({
 }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoAsset, setLogoAsset] = useState<OrganizationLogoAsset | null>(null);
+  const [isLogoRemoved, setIsLogoRemoved] = useState(false);
+  const queryClient = useQueryClient();
+  const logoQueryKey = ['admin', 'organizations', organization.id, 'logo'] as const;
+  const logoQuery = useQuery({
+    queryKey: logoQueryKey,
+    queryFn: () => adminApi.getOrganizationLogoUrl(organization.id),
+  });
   const {
     control,
     handleSubmit,
@@ -39,7 +49,6 @@ export function EditOrganizationScreen({
     defaultValues: {
       code: organization.code ?? '',
       description: organization.description ?? '',
-      logoPath: organization.logo_path ?? '',
       name: organization.name,
       status: organization.status?.toLowerCase() === 'inactive' ? 'inactive' : 'active',
     },
@@ -50,13 +59,17 @@ export function EditOrganizationScreen({
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      const updatedOrganization = await adminApi.updateOrganization(organization.id, {
+      let updatedOrganization = await adminApi.updateOrganization(organization.id, {
         code: values.code || null,
         description: values.description || null,
-        logo_path: values.logoPath || null,
+        ...(isLogoRemoved && !logoAsset ? { logo_path: null } : {}),
         name: values.name.trim(),
         status: values.status,
       });
+      if (logoAsset) {
+        updatedOrganization = await adminApi.uploadOrganizationLogo(organization.id, logoAsset);
+      }
+      await queryClient.invalidateQueries({ queryKey: logoQueryKey });
       Alert.alert('Organization updated', 'The organization details have been saved.', [
         { text: 'Done', onPress: () => onSaved(updatedOrganization) },
       ]);
@@ -71,7 +84,7 @@ export function EditOrganizationScreen({
     <View style={styles.flex}>
       <AppHeader onBackPress={onBack} title="Edit Organization" />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Update organization details</Text>
+        <Text style={styles.title}>Update Organization Details</Text>
         {errorMessage ? <ErrorState message={errorMessage} /> : null}
         <View style={styles.form}>
           <Controller
@@ -118,20 +131,14 @@ export function EditOrganizationScreen({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="logoPath"
-            render={({ field: { onBlur, onChange, value } }) => (
-              <TextInput
-                autoCapitalize="none"
-                error={errors.logoPath?.message}
-                label="Logo path (optional)"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                placeholder="organizations/example/logo.png"
-                value={value}
-              />
-            )}
+          <OrganizationLogoPicker
+            existingUri={isLogoRemoved ? null : logoQuery.data}
+            onChange={(asset) => {
+              setLogoAsset(asset);
+              if (asset) setIsLogoRemoved(false);
+            }}
+            onRemove={() => setIsLogoRemoved(true)}
+            value={logoAsset}
           />
           <View style={styles.statusSection}>
             <Text style={styles.fieldLabel}>Status</Text>
@@ -163,7 +170,14 @@ export function EditOrganizationScreen({
           disabled={isSubmitting}
           label="Save Changes"
           loading={isSubmitting}
-          onPress={onSubmit}
+          onPress={() =>
+            confirmAction({
+              confirmLabel: 'Save',
+              message: 'Save changes to this organization?',
+              onConfirm: onSubmit,
+              title: 'Confirm update',
+            })
+          }
           testID="edit-organization-submit"
           variant="brand"
         />

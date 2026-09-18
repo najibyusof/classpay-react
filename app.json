@@ -23,6 +23,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.najibyusof.classpay",
       "adaptiveIcon": {
         "backgroundColor": "#2864E8",
         "foregroundImage": "./assets/logo.png",
@@ -33,6 +34,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e416678e-b9a9-4b05-9c3d-35bd9bf16ddd"
+      }
+    },
+    "owner": "najibyusof"
   }
 }

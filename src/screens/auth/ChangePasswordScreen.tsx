@@ -8,6 +8,7 @@ import { authApi } from '../../api/authApi';
 import { AppHeader, Button, ErrorState, PasswordInput, Snackbar } from '../../components';
 import { colors, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
+import { confirmAction } from '../../utils/confirmAction';
 
 export const changePasswordSchema = z
   .object({
@@ -70,7 +71,14 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
           disabled={isSubmitting}
           label="Save password"
           loading={isSubmitting}
-          onPress={onSubmit}
+          onPress={() =>
+            confirmAction({
+              confirmLabel: 'Save',
+              message: 'Change your account password?',
+              onConfirm: onSubmit,
+              title: 'Confirm update',
+            })
+          }
         />
       </ScrollView>
       <Snackbar

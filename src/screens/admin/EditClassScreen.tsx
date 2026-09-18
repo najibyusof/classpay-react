@@ -5,10 +5,12 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { z } from 'zod';
 
 import { adminApi } from '../../api/adminApi';
-import { AppHeader, Button, ErrorState, Select, TextInput } from '../../components';
+import { AppHeader, Button, ClassQrCodePicker, ErrorState, Select, TextInput } from '../../components';
+import { environment } from '../../constants/environment';
 import { colors, radius, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
-import type { AdminClass } from '../../types/admin';
+import type { AdminClass, ClassQrCodeAsset } from '../../types/admin';
+import { confirmAction } from '../../utils/confirmAction';
 
 export const editClassSchema = z.object({
   name: z.string().trim().min(1, 'Enter a class name').max(150, 'Class name is too long'),
@@ -24,6 +26,9 @@ export const editClassSchema = z.object({
     .refine((value) => !value || (!Number.isNaN(Number(value)) && Number(value) >= 0), {
       message: 'Enter a valid payment amount',
     }),
+  bankName: z.string().trim().max(100, 'Bank name is too long'),
+  bankAccountName: z.string().trim().max(150, 'Account name is too long'),
+  bankAccountNumber: z.string().trim().max(100, 'Account number is too long'),
 });
 
 type EditClassFormValues = z.infer<typeof editClassSchema>;
@@ -86,12 +91,16 @@ export function EditClassScreen({
 }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [qrCodeAsset, setQrCodeAsset] = useState<ClassQrCodeAsset | null>(null);
   const {
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<EditClassFormValues>({
     defaultValues: {
+      bankAccountName: classItem.payment_setting?.bank_account_name ?? '',
+      bankAccountNumber: classItem.payment_setting?.bank_account_number ?? '',
+      bankName: classItem.payment_setting?.bank_name ?? '',
       dayOfWeek:
         classItem.schedules?.[0]?.day_of_week !== undefined
           ? String(classItem.schedules[0].day_of_week)
@@ -131,6 +140,16 @@ export function EditClassScreen({
         status: values.status,
         teacher_name: values.teacherName.trim(),
       });
+      await adminApi.updateClassPaymentSetting(classItem.id, {
+        bank_account_name: values.bankAccountName || null,
+        bank_account_number: values.bankAccountNumber || null,
+        bank_name: values.bankName || null,
+        payment_frequency: values.recurrenceType,
+        required_amount: values.paymentAmount ? Number(values.paymentAmount) : undefined,
+      });
+      if (qrCodeAsset) {
+        await adminApi.uploadClassPaymentQrCode(classItem.id, qrCodeAsset);
+      }
       Alert.alert('Class updated', 'The class details have been saved.', [
         { text: 'Done', onPress: () => onSaved(updatedClass) },
       ]);
@@ -277,12 +296,67 @@ export function EditClassScreen({
               />
             )}
           />
+          <Controller
+            control={control}
+            name="bankName"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.bankName?.message}
+                label="Bank Name"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="e.g. Maybank"
+                value={value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="bankAccountName"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.bankAccountName?.message}
+                label="Account Name"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="e.g. Pusat Tuisyen ClassPay"
+                value={value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="bankAccountNumber"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                error={errors.bankAccountNumber?.message}
+                keyboardType="number-pad"
+                label="Account Number"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="551234567890"
+                value={value}
+              />
+            )}
+          />
+          <ClassQrCodePicker
+            existingUri={qrCodeUriFromPath(classItem.payment_setting?.qr_code_path)}
+            onChange={setQrCodeAsset}
+            value={qrCodeAsset}
+          />
         </View>
         <Button
           disabled={isSubmitting}
           label="Save Changes"
           loading={isSubmitting}
-          onPress={onSubmit}
+          onPress={() =>
+            confirmAction({
+              confirmLabel: 'Save',
+              message: 'Save changes to this class?',
+              onConfirm: onSubmit,
+              title: 'Confirm update',
+            })
+          }
           testID="edit-class-submit"
           variant="brand"
         />
@@ -299,6 +373,13 @@ function normalizeRecurrence(
   value?: string | null,
 ): EditClassFormValues['recurrenceType'] {
   return value === 'fortnightly' || value === 'monthly' ? value : value === 'weekly' ? 'weekly' : undefined;
+}
+
+function qrCodeUriFromPath(path?: string | null) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const apiRoot = environment.apiBaseUrl.replace(/\/api\/v\d+$/, '');
+  return `${apiRoot}/storage/${path.replace(/^\/+/, '')}`;
 }
 
 const statusOptions = [

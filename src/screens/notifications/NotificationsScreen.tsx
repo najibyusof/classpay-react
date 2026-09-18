@@ -34,8 +34,8 @@ export function NotificationsScreen() {
     queryFn: ({ pageParam }) => notificationApi.getNotifications(pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.meta.current_page < lastPage.meta.last_page
-        ? lastPage.meta.current_page + 1
+      (lastPage.meta?.current_page ?? 1) < (lastPage.meta?.last_page ?? 1)
+        ? (lastPage.meta?.current_page ?? 1) + 1
         : undefined,
   });
   const markAllAsRead = useMutation({
@@ -73,24 +73,24 @@ export function NotificationsScreen() {
         }
       >
         <View style={styles.heading}>
-          <Text style={styles.title}>Notifications</Text>
+          <Text style={styles.title}>Notifikasi</Text>
           <Button
             disabled={markAllAsRead.isPending}
             fullWidth={false}
-            label="Read all"
+            label="Tanda semua dibaca"
             loading={markAllAsRead.isPending}
             onPress={() => markAllAsRead.mutate()}
             variant="outline"
           />
         </View>
         <Select
-          label="Show"
+          label="Papar"
           onValueChange={setReadFilter}
           options={readOptions}
           value={readFilter}
         />
         <Select
-          label="Type"
+          label="Jenis"
           onValueChange={setTypeFilter}
           options={typeOptions}
           value={typeFilter}
@@ -109,8 +109,8 @@ export function NotificationsScreen() {
         !notificationsQuery.isError &&
         notifications.length === 0 ? (
           <EmptyState
-            title="No notifications found"
-            description="Notifications matching the selected filters will appear here."
+            title="Tiada notifikasi"
+            description="Notifikasi yang sepadan dengan penapis yang dipilih akan dipaparkan di sini."
           />
         ) : null}
         {notifications.map((notification) => (
@@ -123,7 +123,7 @@ export function NotificationsScreen() {
         {notificationsQuery.hasNextPage ? (
           <Button
             disabled={notificationsQuery.isFetchingNextPage}
-            label="Load more"
+            label="Lihat lagi"
             loading={notificationsQuery.isFetchingNextPage}
             onPress={() => void notificationsQuery.fetchNextPage()}
             variant="outline"
@@ -158,7 +158,7 @@ function NotificationCard({
     <Card accessibilityLabel={`View notification ${notification.title}`} onPress={onPress}>
       <View style={styles.cardHeader}>
         <Text style={[styles.cardTitle, !isRead && styles.unread]}>{notification.title}</Text>
-        <StatusBadge label={isRead ? 'Read' : 'Unread'} tone={isRead ? 'neutral' : 'info'} />
+        <StatusBadge label={isRead ? 'Dibaca' : 'Belum dibaca'} tone={isRead ? 'neutral' : 'info'} />
       </View>
       <Text numberOfLines={2} style={styles.message}>
         {notification.message}
@@ -179,19 +179,19 @@ function NotificationLoadingState() {
 }
 
 const readOptions = [
-  { label: 'All notifications', value: 'all' },
-  { label: 'Unread only', value: 'unread' },
+  { label: 'Semua notifikasi', value: 'all' },
+  { label: 'Belum dibaca sahaja', value: 'unread' },
 ] as const;
 const typeOptions = [
-  { label: 'All types', value: 'all' },
-  { label: 'Payment reminder', value: 'payment.reminder' },
-  { label: 'Payment success', value: 'payment.success' },
-  { label: 'Payment failed', value: 'payment.failed' },
-  { label: 'Payment overdue', value: 'payment.overdue' },
-  { label: 'Payment pending', value: 'payment.pending' },
-  { label: 'Class added', value: 'class.added' },
-  { label: 'Class removed', value: 'class.removed' },
-  { label: 'System notification', value: 'system.notification' },
+  { label: 'Semua jenis', value: 'all' },
+  { label: 'Peringatan pembayaran', value: 'payment.reminder' },
+  { label: 'Pembayaran berjaya', value: 'payment.success' },
+  { label: 'Pembayaran gagal', value: 'payment.failed' },
+  { label: 'Pembayaran tertunggak', value: 'payment.overdue' },
+  { label: 'Pembayaran belum selesai', value: 'payment.pending' },
+  { label: 'Kelas ditambah', value: 'class.added' },
+  { label: 'Kelas dikeluarkan', value: 'class.removed' },
+  { label: 'Notifikasi sistem', value: 'system.notification' },
 ] as const;
 
 const styles = StyleSheet.create({

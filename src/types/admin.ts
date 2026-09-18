@@ -12,6 +12,18 @@ export interface AdminOrganization {
   updated_at?: string | null;
 }
 
+export interface OrganizationLogoAsset {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export interface ClassQrCodeAsset {
+  uri: string;
+  name: string;
+  type: string;
+}
+
 export interface AdminOrganizationListResponse {
   data: {
     organizations: AdminOrganization[];
@@ -50,7 +62,19 @@ export interface AdminClassPaymentSetting {
   required_amount?: number | string | null;
   currency?: string;
   payment_frequency?: string;
+  bank_name?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
   qr_code_path?: string | null;
+}
+
+export interface ClassPaymentSettingRequest {
+  required_amount?: number;
+  currency?: string;
+  payment_frequency?: 'weekly' | 'fortnightly' | 'monthly';
+  bank_name?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
 }
 
 export interface AdminClass {

@@ -18,6 +18,7 @@ import { paymentCreationService } from '../../services/paymentCreationService';
 import { colors, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
 import type { PaymentSchedule } from '../../types/student';
+import { confirmAction } from '../../utils/confirmAction';
 import { isDecimalWithinRange, normalizeDecimal } from '../../utils/money';
 import { PaymentFailedScreen } from './PaymentFailedScreen';
 import { PaymentPendingScreen } from './PaymentPendingScreen';
@@ -110,7 +111,14 @@ export function PaymentConfirmationScreen({
         disabled={createPayment.isPending}
         label="Create payment"
         loading={createPayment.isPending}
-        onPress={submit}
+        onPress={() =>
+          confirmAction({
+            confirmLabel: 'Create',
+            message: 'Create this payment?',
+            onConfirm: submit,
+            title: 'Confirm create',
+          })
+        }
       />
     </ScrollView>
   );

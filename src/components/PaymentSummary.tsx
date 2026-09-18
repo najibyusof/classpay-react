@@ -15,9 +15,9 @@ export function PaymentSummary({ schedule, additionalInfaq }: PaymentSummaryProp
   const currency = schedule.currency ?? 'MYR';
   return (
     <Card>
-      <Text style={styles.title}>Payment summary</Text>
+      <Text style={styles.title}>Ringkasan pembayaran</Text>
       <PaymentSummaryRow
-        label="Required amount"
+        label="Jumlah diperlukan"
         value={
           <CurrencyText
             amount={schedule.required_amount}
@@ -27,7 +27,7 @@ export function PaymentSummary({ schedule, additionalInfaq }: PaymentSummaryProp
         }
       />
       <PaymentSummaryRow
-        label="Additional infaq"
+        label="Sumbangan infaq"
         value={<CurrencyText amount={additionalInfaq} currency={currency} style={styles.value} />}
       />
     </Card>

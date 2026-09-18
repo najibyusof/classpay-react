@@ -8,6 +8,7 @@ import { Button, Card, EmptyState, ErrorState, Skeleton, TextInput } from '../..
 import { colors, radius, spacing, typography } from '../../theme';
 import { normalizeApiError } from '../../types/api';
 import type { AdminParticipant } from '../../types/admin';
+import { confirmAction } from '../../utils/confirmAction';
 import { CreateParticipantScreen } from './CreateParticipantScreen';
 
 export function AddParticipantsScreen({
@@ -173,7 +174,14 @@ export function AddParticipantsScreen({
                 fullWidth={false}
                 label="Add"
                 loading={isAdding}
-                onPress={() => void addParticipant()}
+                onPress={() =>
+                  confirmAction({
+                    confirmLabel: 'Add',
+                    message: `Add this ${participantType} to ${className}?`,
+                    onConfirm: () => void addParticipant(),
+                    title: 'Confirm add',
+                  })
+                }
                 variant="secondary"
               />
             </View>

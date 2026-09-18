@@ -33,8 +33,8 @@ export function PaymentScheduleListScreen({ audience }: PaymentScheduleListScree
         : sponsorApi.getPaymentSchedules(pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.meta.current_page < lastPage.meta.last_page
-        ? lastPage.meta.current_page + 1
+      (lastPage.meta?.current_page ?? 1) < (lastPage.meta?.last_page ?? 1)
+        ? (lastPage.meta?.current_page ?? 1) + 1
         : undefined,
   });
   const currentQuery = useQuery({

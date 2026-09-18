@@ -2,6 +2,7 @@ import { apiClient } from './client';
 
 import type {
   AdminDashboardData,
+  ClassPaymentSettingRequest,
   AdminClass,
   AdminClassListResponse,
   AdminParticipant,
@@ -15,7 +16,9 @@ import type {
   CreateClassRequest,
   CreateOrganizationRequest,
   AddClassParticipantRequest,
+  ClassQrCodeAsset,
   UpdateClassRequest,
+  OrganizationLogoAsset,
 } from '../types/admin';
 import type { PaginatedResponse, PaymentHistoryResponse } from '../types/student';
 
@@ -73,6 +76,30 @@ export const adminApi = {
     >(`/admin/organizations/${organizationId}`, payload);
     return unwrapData(data);
   },
+  uploadOrganizationLogo: async (
+    organizationId: number | string,
+    asset: OrganizationLogoAsset,
+  ): Promise<AdminOrganizationListResponse['data']['organizations'][number]> => {
+    const formData = new FormData();
+    formData.append('logo', {
+      name: asset.name,
+      type: asset.type,
+      uri: asset.uri,
+    } as unknown as Blob);
+    const { data } = await apiClient.post<
+      | AdminOrganizationListResponse['data']['organizations'][number]
+      | { data: AdminOrganizationListResponse['data']['organizations'][number] }
+    >(`/admin/organizations/${organizationId}/logo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return unwrapData(data);
+  },
+  getOrganizationLogoUrl: async (organizationId: number | string): Promise<string | null> => {
+    const { data } = await apiClient.get<{ data: { logo_url: string | null } }>(
+      `/admin/organizations/${organizationId}/logo`,
+    );
+    return data.data.logo_url;
+  },
   getOrganizationClasses: async (
     organizationId: number | string,
     page = 1,
@@ -106,6 +133,16 @@ export const adminApi = {
     );
     return unwrapData(data);
   },
+  getClassPaymentSetting: async (
+    classId: number | string,
+  ): Promise<NonNullable<AdminClass['payment_setting']>> => {
+    const { data } = await apiClient.get<
+      NonNullable<AdminClass['payment_setting']> | {
+        data: NonNullable<AdminClass['payment_setting']>;
+      }
+    >(`/classes/${classId}/payment-setting`);
+    return unwrapData(data);
+  },
   updateOrganizationClass: async (
     organizationId: number | string,
     classId: number | string,
@@ -115,6 +152,32 @@ export const adminApi = {
       `/organizations/${organizationId}/classes/${classId}`,
       payload,
     );
+    return unwrapData(data);
+  },
+  updateClassPaymentSetting: async (
+    classId: number | string,
+    payload: ClassPaymentSettingRequest,
+  ): Promise<AdminClass['payment_setting']> => {
+    const { data } = await apiClient.patch<
+      NonNullable<AdminClass['payment_setting']> | { data: NonNullable<AdminClass['payment_setting']> }
+    >(`/classes/${classId}/payment-setting`, payload);
+    return unwrapData(data);
+  },
+  uploadClassPaymentQrCode: async (
+    classId: number | string,
+    asset: ClassQrCodeAsset,
+  ): Promise<AdminClass['payment_setting']> => {
+    const formData = new FormData();
+    formData.append('qr_code', {
+      name: asset.name,
+      type: asset.type,
+      uri: asset.uri,
+    } as unknown as Blob);
+    const { data } = await apiClient.post<
+      NonNullable<AdminClass['payment_setting']> | { data: NonNullable<AdminClass['payment_setting']> }
+    >(`/classes/${classId}/payment-setting/qr-code`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return unwrapData(data);
   },
   getClassParticipants: async (

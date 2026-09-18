@@ -11,50 +11,49 @@ export function ProfileScreen() {
   if (profileQuery.isError) {
     return (
       <ErrorState
-        message="Unable to load your profile."
+        message="Tidak dapat memuatkan profil anda."
         onRetry={() => void profileQuery.refetch()}
       />
     );
   }
   if (!user)
     return (
-      <EmptyState title="Profile unavailable" description="Sign in again to view your profile." />
+      <EmptyState title="Profil tidak tersedia" description="Log masuk semula untuk melihat profil anda." />
     );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.title}>Profil</Text>
       <Card>
-        <ProfileRow label="Name" value={user.name} />
-        <ProfileRow label="Phone" value={user.phone} />
-        <ProfileRow label="Email" value={user.email ?? 'Not provided'} />
-        <ProfileRow label="User type" value={user.user_type} />
+        <ProfileRow label="Nama" value={user.name} />
+        <ProfileRow label="Telefon" value={user.phone} />
+        <ProfileRow label="E-mel" value={user.email ?? 'Tiada'} />
         <ProfileRow
           label="Status"
           value={
             <StatusBadge
-              label={user.status}
+              label={user.status.toLowerCase() === 'active' ? 'Aktif' : user.status}
               tone={user.status.toLowerCase() === 'active' ? 'success' : 'neutral'}
             />
           }
         />
         <ProfileRow
-          label="Phone verified"
+          label="Telefon disahkan"
           value={
             user.phone_verified_at ? (
               <DateText style={styles.value} value={user.phone_verified_at} />
             ) : (
-              'Not verified'
+              'Belum disahkan'
             )
           }
         />
         <ProfileRow
-          label="Last login"
+          label="Log masuk terakhir"
           value={
             user.last_login_at ? (
               <DateText style={styles.value} value={user.last_login_at} />
             ) : (
-              'Not available'
+              'Tiada'
             )
           }
         />

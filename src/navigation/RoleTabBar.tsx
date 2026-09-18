@@ -8,7 +8,9 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 
 const tabIcons: Record<string, IconName> = {
   Dashboard: 'home-outline',
+  Classes: 'book-outline',
   Management: 'people-outline',
+  MyOrganizations: 'business-outline',
   Notifications: 'notifications-outline',
   Organizations: 'business-outline',
   PaymentHistory: 'receipt-outline',

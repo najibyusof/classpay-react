@@ -1,21 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { adminApi } from '../../api/adminApi';
-import { Card, ErrorState, Skeleton } from '../../components';
+import { Card, ErrorState, OrganizationLogo, Skeleton } from '../../components';
 import { useAdminDashboard, useAdminOrganizations } from '../../hooks/useAdminDashboard';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius, spacing, typography } from '../../theme';
 import { normalizeApiError } from '../../types/api';
 import { getAuthorizedOrganizations, getOrganizationCount } from '../../types/admin';
+import type { AdminTabParamList } from '../../navigation/AdminNavigator';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function AdminDashboardScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<BottomTabNavigationProp<AdminTabParamList>>();
   const user = useAuthStore((state) => state.user);
   const dashboardQuery = useAdminDashboard();
   const organizationsQuery = useAdminOrganizations();
@@ -92,24 +94,20 @@ export function AdminDashboardScreen() {
 
       <Card>
         <View style={styles.organizationRow}>
-          <View style={styles.organizationIcon}>
-            <Ionicons color={colors.info} name="business" size={22} />
-          </View>
+          {currentOrganization ? (
+            <OrganizationLogo organizationId={currentOrganization.id} />
+          ) : (
+            <View style={styles.organizationIcon}>
+              <Ionicons color={colors.info} name="business" size={22} />
+            </View>
+          )}
           <View style={styles.organizationCopy}>
-            <Text style={styles.eyebrow}>Current Organization</Text>
+            <Text style={styles.eyebrow}>Latest Organization</Text>
             <Text numberOfLines={1} style={styles.organizationName}>
               {currentOrganization?.name ?? 'All authorized organizations'}
             </Text>
             <Text style={styles.organizationRole}>Admin</Text>
           </View>
-          <Pressable
-            accessibilityLabel="Switch organization"
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('Organizations' as never)}
-            style={styles.switchButton}
-          >
-            <Text style={styles.switchLabel}>Switch</Text>
-          </Pressable>
         </View>
       </Card>
 
@@ -145,17 +143,17 @@ export function AdminDashboardScreen() {
         <QuickAction
           icon="business"
           label="Add Organization"
-          onPress={() => navigation.navigate('Management' as never)}
+          onPress={() => navigation.navigate('Management', { initialArea: 'organization' })}
         />
         <QuickAction
           icon="book"
           label="Create Class"
-          onPress={() => navigation.navigate('Management' as never)}
+          onPress={() => navigation.navigate('Organizations')}
         />
         <QuickAction
           icon="card"
           label="View Payments"
-          onPress={() => navigation.navigate('Payments' as never)}
+          onPress={() => navigation.navigate('Payments')}
         />
         <QuickAction
           icon="paper-plane"

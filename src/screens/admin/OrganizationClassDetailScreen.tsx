@@ -1,9 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useState } from 'react';
 
 import { adminApi } from '../../api/adminApi';
 import { Button, ErrorState, Skeleton, StatusBadge } from '../../components';
+import { environment } from '../../constants/environment';
 import { colors, radius, spacing, typography } from '../../theme';
 import { normalizeApiError } from '../../types/api';
 import type { AdminClass } from '../../types/admin';
@@ -25,9 +37,15 @@ export function OrganizationClassDetailScreen({
   organizationId: number | string;
   organizationName: string;
 }) {
+  const [qrCodeUnavailable, setQrCodeUnavailable] = useState(false);
+  const [qrViewerVisible, setQrViewerVisible] = useState(false);
   const classQuery = useQuery({
     queryKey: ['admin', 'organizations', organizationId, 'classes', classId],
     queryFn: () => adminApi.getOrganizationClass(organizationId, classId),
+  });
+  const paymentSettingQuery = useQuery({
+    queryKey: ['admin', 'classes', classId, 'payment-setting'],
+    queryFn: () => adminApi.getClassPaymentSetting(classId),
   });
   const participantsQuery = useQuery({
     queryKey: ['admin', 'classes', classId, 'participants'],
@@ -55,6 +73,7 @@ export function OrganizationClassDetailScreen({
     );
   if (!classQuery.data) return <Skeleton height={480} />;
   const classItem = classQuery.data;
+  const qrCodeUri = `${environment.apiBaseUrl}/classes/${classId}/payment-setting/qr-code-file`;
   const participantsTotal = (participantsQuery.data?.meta as { total?: unknown } | undefined)
     ?.total;
   const participantsListCount = participantsQuery.data?.data.length;
@@ -115,6 +134,7 @@ export function OrganizationClassDetailScreen({
         <ClassSummary
           classItem={classItem}
           organizationName={organizationName}
+          paymentSetting={paymentSettingQuery.data ?? classItem.payment_setting}
           participantsCount={participantsCount}
         />
         {participantsError ? (
@@ -125,14 +145,14 @@ export function OrganizationClassDetailScreen({
         ) : null}
         <View style={styles.qrCard}>
           <Text style={styles.qrTitle}>Payment QR Code</Text>
-          {classItem.payment_qr_code ||
-          classItem.payment_qr_path ||
-          classItem.payment_setting?.qr_code_path ? (
-            <Text style={styles.qrValue}>
-              {classItem.payment_qr_code ??
-                classItem.payment_qr_path ??
-                classItem.payment_setting?.qr_code_path}
-            </Text>
+          {!qrCodeUnavailable ? (
+            <Image
+              accessibilityLabel="Class payment QR code"
+              onError={() => setQrCodeUnavailable(true)}
+              resizeMode="contain"
+              source={{ uri: qrCodeUri }}
+              style={styles.qrImage}
+            />
           ) : (
             <View style={styles.qrPlaceholder}>
               <Ionicons color={colors.mutedText} name="qr-code-outline" size={58} />
@@ -141,19 +161,25 @@ export function OrganizationClassDetailScreen({
           )}
           <View style={styles.qrActions}>
             <Button
+              disabled={qrCodeUnavailable}
               fullWidth={false}
               icon="scan-outline"
               label="View Full Size"
-              onPress={() =>
-                Alert.alert('Payment QR Code', 'Full-size QR preview is not available yet.')
-              }
+              onPress={() => setQrViewerVisible(true)}
               variant="outline"
             />
             <Button
+              disabled={qrCodeUnavailable}
               fullWidth={false}
               icon="share-outline"
               label="Share"
-              onPress={() => Alert.alert('Share QR Code', 'QR sharing is not available yet.')}
+              onPress={() =>
+                void Share.share({
+                  message: `Payment QR Code: ${qrCodeUri}`,
+                  title: 'Payment QR Code',
+                  url: qrCodeUri,
+                })
+              }
               variant="outline"
             />
           </View>
@@ -161,6 +187,29 @@ export function OrganizationClassDetailScreen({
         <Button label="Add Participants" onPress={onAddParticipants} variant="brand" />
         <Button label="View Payments" onPress={onViewPayments} variant="outline" />
       </ScrollView>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setQrViewerVisible(false)}
+        transparent
+        visible={qrViewerVisible}
+      >
+        <View style={styles.qrModalBackdrop}>
+          <Image
+            accessibilityLabel="Full-size class payment QR code"
+            resizeMode="contain"
+            source={{ uri: qrCodeUri }}
+            style={styles.qrModalImage}
+          />
+          <Pressable
+            accessibilityLabel="Close full-size QR code"
+            accessibilityRole="button"
+            onPress={() => setQrViewerVisible(false)}
+            style={styles.qrModalClose}
+          >
+            <Text style={styles.qrModalCloseLabel}>Close</Text>
+          </Pressable>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -168,10 +217,12 @@ export function OrganizationClassDetailScreen({
 function ClassSummary({
   classItem,
   organizationName,
+  paymentSetting,
   participantsCount,
 }: {
   classItem: AdminClass;
   organizationName: string;
+  paymentSetting?: AdminClass['payment_setting'];
   participantsCount?: number;
 }) {
   const status = classItem.status ?? 'draft';
@@ -188,15 +239,14 @@ function ClassSummary({
   const frequency = recurrence ? capitalize(recurrence) : undefined;
   const paymentAmount =
     classItem.payment_amount ?? classItem.payment_setting?.required_amount ?? null;
-  const paymentSetting = classItem.payment_setting as
-    | { bank_name?: string | null; bank_account_number?: string | null }
+  const resolvedPaymentSetting = paymentSetting as
+    | {
+        bank_name?: string | null;
+        bank_account_name?: string | null;
+        bank_account_number?: string | null;
+      }
     | null
     | undefined;
-  const bank = paymentSetting?.bank_name
-    ? `${paymentSetting.bank_name}${
-        paymentSetting.bank_account_number ? ` (${paymentSetting.bank_account_number})` : ''
-      }`
-    : undefined;
   const rows = [
     ['Organization', organizationName],
     ['Teacher', classItem.teacher_name ?? '--'],
@@ -204,7 +254,9 @@ function ClassSummary({
     ['Frequency', frequency ?? '--'],
     ['Payment Amount', paymentAmount ? `RM ${paymentAmount}` : '--'],
     ['Participants', participants === undefined ? '--' : `${participants} Students`],
-    ['Bank', bank ?? '--'],
+    ['Bank Name', resolvedPaymentSetting?.bank_name ?? '--'],
+    ['Account Name', resolvedPaymentSetting?.bank_account_name ?? '--'],
+    ['Account Number', resolvedPaymentSetting?.bank_account_number ?? '--'],
   ];
 
   return (
@@ -301,6 +353,22 @@ const styles = StyleSheet.create({
   qrTitle: { ...typography.label, color: colors.text },
   qrPlaceholder: { alignItems: 'center', gap: spacing.xs, padding: spacing.lg },
   qrHint: { ...typography.caption, color: colors.mutedText },
-  qrValue: { ...typography.caption, color: colors.text, padding: spacing.md },
+  qrImage: { height: 220, marginVertical: spacing.md, width: 220 },
+  qrModalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: colors.overlay,
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  qrModalImage: { backgroundColor: colors.surface, height: 320, width: 320 },
+  qrModalClose: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  qrModalCloseLabel: { ...typography.label, color: colors.text },
   qrActions: { flexDirection: 'row', gap: spacing.sm },
 });

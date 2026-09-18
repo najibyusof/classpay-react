@@ -24,6 +24,14 @@ export type SponsorTabParamList = {
 
 const Tab = createBottomTabNavigator<SponsorTabParamList>();
 
+function SponsorPaymentSchedulesScreen() {
+  return <PaymentScheduleListScreen audience="sponsor" />;
+}
+
+function SponsorPaymentHistoryScreen() {
+  return <PaymentHistoryScreen audience="sponsor" />;
+}
+
 export function SponsorNavigator() {
   return (
     <Tab.Navigator
@@ -38,12 +46,12 @@ export function SponsorNavigator() {
     >
       <Tab.Screen component={SponsorDashboardScreen} name="Dashboard" />
       <Tab.Screen
-        component={() => <PaymentScheduleListScreen audience="sponsor" />}
+        component={SponsorPaymentSchedulesScreen}
         name="SponsoredPaymentSchedules"
         options={{ title: 'Schedules' }}
       />
       <Tab.Screen
-        component={() => <PaymentHistoryScreen audience="sponsor" />}
+        component={SponsorPaymentHistoryScreen}
         name="PaymentHistory"
         options={{ title: 'History' }}
       />

@@ -9,6 +9,7 @@ import { Button, ErrorState, PasswordInput } from '../../components';
 import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
+import { confirmAction } from '../../utils/confirmAction';
 
 const passwordSchema = z
   .object({
@@ -92,7 +93,14 @@ export function InitialPasswordScreen() {
         disabled={isSubmitting}
         label="Set password"
         loading={isSubmitting}
-        onPress={onSubmit}
+        onPress={() =>
+          confirmAction({
+            confirmLabel: 'Set',
+            message: 'Set this password for your account?',
+            onConfirm: onSubmit,
+            title: 'Confirm update',
+          })
+        }
       />
       <Button
         disabled={isSubmitting}

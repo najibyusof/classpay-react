@@ -27,10 +27,10 @@ describe('payment inputs', () => {
       />,
     );
 
-    const input = screen.getByLabelText('Additional infaq');
+    const input = screen.getByLabelText('Sumbangan infaq');
     expect(input.props.editable).toBe(false);
     expect(input.props.value).toBe('0');
-    expect(screen.getByText('Additional infaq is not available for this schedule.')).toBeTruthy();
+    expect(screen.getByText('Sumbangan infaq tidak tersedia untuk jadual ini.')).toBeTruthy();
   });
 
   it('renders pending, failed, and backend-confirmed success states distinctly', async () => {

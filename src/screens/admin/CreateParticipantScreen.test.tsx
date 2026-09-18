@@ -69,6 +69,9 @@ describe('CreateParticipantScreen', () => {
     fireEvent.changeText(screen.getByLabelText('Email'), 'student@example.com');
     fireEvent.press(screen.getByTestId('create-participant-submit'));
 
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    alertSpy.mock.calls[0]?.[2]?.[1]?.onPress?.();
+
     await waitFor(() => {
       expect(register).toHaveBeenCalledWith({
         device_name: '-',
@@ -92,7 +95,7 @@ describe('CreateParticipantScreen', () => {
       });
     });
 
-    const [title, message, buttons] = alertSpy.mock.calls[0] ?? [];
+    const [title, message, buttons] = alertSpy.mock.calls[1] ?? [];
     expect(title).toBe('Student created');
     expect(message).toBe('Ahmad Daniel was added to Form 5 Physics.');
     buttons?.[0]?.onPress?.();

@@ -62,6 +62,9 @@ describe('CreateParticipantScreen sponsor', () => {
     fireEvent.changeText(screen.getByLabelText('Phone Number *'), '+60198765432');
     fireEvent.press(screen.getByTestId('create-participant-submit'));
 
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    alertSpy.mock.calls[0]?.[2]?.[1]?.onPress?.();
+
     await waitFor(() => {
       expect(register).toHaveBeenCalledWith({
         device_name: '-',
@@ -85,7 +88,7 @@ describe('CreateParticipantScreen sponsor', () => {
       });
     });
 
-    const [title, message, buttons] = alertSpy.mock.calls[0] ?? [];
+    const [title, message, buttons] = alertSpy.mock.calls[1] ?? [];
     expect(title).toBe('Sponsor created');
     expect(message).toBe('Maya Ali was added to Form 5 Physics.');
     buttons?.[0]?.onPress?.();

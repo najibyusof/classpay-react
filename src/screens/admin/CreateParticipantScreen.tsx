@@ -10,6 +10,7 @@ import { authApi } from '../../api/authApi';
 import { AppHeader, Button, ErrorState, TextInput } from '../../components';
 import { colors, spacing, typography } from '../../theme';
 import { toApiError } from '../../types/api';
+import { confirmAction } from '../../utils/confirmAction';
 import type { AddClassParticipantRequest } from '../../types/admin';
 
 const DEFAULT_PARTICIPANT_PASSWORD = 'password';
@@ -62,7 +63,7 @@ export function CreateParticipantScreen({
 
   const roleLabel = participantType === 'student' ? 'Student' : 'Sponsor';
 
-  const onSubmit = handleSubmit(async (values) => {
+  const createParticipant = async (values: CreateParticipantFormValues) => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
@@ -105,7 +106,16 @@ export function CreateParticipantScreen({
     } finally {
       setIsSubmitting(false);
     }
-  });
+  };
+
+  const onSubmit = handleSubmit((values) =>
+    confirmAction({
+      confirmLabel: 'Create',
+      message: `Create this ${participantType}?`,
+      onConfirm: () => void createParticipant(values),
+      title: 'Confirm create',
+    }),
+  );
 
   return (
     <View style={styles.flex}>

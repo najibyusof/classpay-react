@@ -35,8 +35,8 @@ export function PaymentHistoryScreen({ audience }: PaymentHistoryScreenProps) {
         : sponsorApi.getPayments({ ...filters, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.meta.current_page < lastPage.meta.last_page
-        ? lastPage.meta.current_page + 1
+      (lastPage.meta?.current_page ?? 1) < (lastPage.meta?.last_page ?? 1)
+        ? (lastPage.meta?.current_page ?? 1) + 1
         : undefined,
   });
   const payments = paymentsQuery.data?.pages.flatMap((page) => page.data) ?? [];

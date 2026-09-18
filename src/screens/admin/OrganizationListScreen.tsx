@@ -6,12 +6,21 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { adminApi } from '../../api/adminApi';
-import { Card, EmptyState, ErrorState, Skeleton, StatusBadge, TextInput } from '../../components';
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  OrganizationLogo,
+  Skeleton,
+  StatusBadge,
+  TextInput,
+} from '../../components';
 import { adminQueryKeys, useAdminOrganizations } from '../../hooks/useAdminDashboard';
 import { colors, radius, spacing, typography } from '../../theme';
 import { normalizeApiError } from '../../types/api';
 import { getAuthorizedOrganizations } from '../../types/admin';
 import type { AdminClass, AdminOrganization } from '../../types/admin';
+import { confirmAction } from '../../utils/confirmAction';
 import { AdminManagementScreen } from './AdminManagementScreen';
 import { EditOrganizationScreen } from './EditOrganizationScreen';
 import { OrganizationClassesScreen } from './OrganizationClassesScreen';
@@ -63,7 +72,16 @@ export function OrganizationListScreen() {
     return (
       <CreateClassScreen
         onBack={() => setOrganizationToCreateClass(null)}
-        onCreated={() => setOrganizationToCreateClass(null)}
+        onCreated={() => {
+          void queryClient.invalidateQueries({
+            queryKey: ['admin', 'organizations', organizationToCreateClass.id, 'classes'],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ['admin', 'organizations', organizationToCreateClass.id, 'classes', 'count'],
+          });
+          void queryClient.invalidateQueries({ queryKey: ['admin', 'classes', 'count'] });
+          setOrganizationToCreateClass(null);
+        }}
         organizationId={organizationToCreateClass.id}
         organizationName={organizationToCreateClass.name}
       />
@@ -278,9 +296,7 @@ function OrganizationRow({
   return (
     <Card accessibilityLabel={`View ${organization.name}`} onPress={onPress}>
       <View style={styles.organizationRow}>
-        <View style={[styles.organizationIcon, { backgroundColor: `${iconColor}18` }]}>
-          <Ionicons color={iconColor} name="business" size={23} />
-        </View>
+        <OrganizationLogo color={iconColor} organizationId={organization.id} />
         <View style={styles.organizationCopy}>
           <Text numberOfLines={1} style={styles.name}>
             {organization.name}
@@ -405,9 +421,7 @@ function OrganizationDashboardScreen({
 
       <Card>
         <View style={styles.detailIdentity}>
-          <View style={styles.detailIcon}>
-            <Ionicons color={colors.info} name="business" size={28} />
-          </View>
+          <OrganizationLogo organizationId={organizationDetails.id} size="lg" />
           <View style={styles.detailIdentityCopy}>
             <View style={styles.detailNameRow}>
               <Text numberOfLines={1} style={styles.detailName}>
@@ -450,10 +464,16 @@ function OrganizationDashboardScreen({
           icon="trash-outline"
           label="Delete Organization"
           onPress={() =>
-            Alert.alert(
-              'Delete organization',
-              'Organization deletion is not available in the mobile app yet.',
-            )
+            confirmAction({
+              confirmLabel: 'Delete',
+              message: 'Delete this organization?',
+              onConfirm: () =>
+                Alert.alert(
+                  'Delete organization',
+                  'Organization deletion is not available in the mobile app yet.',
+                ),
+              title: 'Confirm delete',
+            })
           }
         />
       </View>
@@ -541,14 +561,6 @@ const styles = StyleSheet.create({
   moreButton: { alignItems: 'center', height: 40, justifyContent: 'center', width: 40 },
   detailHeaderTitle: { ...typography.title, color: colors.text },
   detailIdentity: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  detailIcon: {
-    alignItems: 'center',
-    backgroundColor: colors.infoSubtle,
-    borderRadius: radius.md,
-    height: 52,
-    justifyContent: 'center',
-    width: 52,
-  },
   detailIdentityCopy: { flex: 1, gap: spacing.xs },
   detailNameRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   detailName: { ...typography.title, color: colors.text, flex: 1 },

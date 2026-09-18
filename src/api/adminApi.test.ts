@@ -190,6 +190,71 @@ describe('adminApi', () => {
     });
   });
 
+  it('gets the class payment setting', async () => {
+    get.mockResolvedValue({
+      data: {
+        data: {
+          bank_account_name: 'Najib Yusof',
+          bank_account_number: '55419004846',
+          bank_name: 'Maybank',
+          class_id: 10,
+          qr_code_path: 'qr-codes/class.png',
+          required_amount: '50.00',
+        },
+      },
+    });
+
+    await expect(adminApi.getClassPaymentSetting(10)).resolves.toEqual({
+      bank_account_name: 'Najib Yusof',
+      bank_account_number: '55419004846',
+      bank_name: 'Maybank',
+      class_id: 10,
+      qr_code_path: 'qr-codes/class.png',
+      required_amount: '50.00',
+    });
+    expect(get).toHaveBeenCalledWith('/classes/10/payment-setting');
+  });
+
+  it('updates class payment setting bank details', async () => {
+    patch.mockResolvedValue({
+      data: { data: { id: 5, class_id: 10, bank_name: 'Maybank' } },
+    });
+
+    await expect(
+      adminApi.updateClassPaymentSetting(10, {
+        bank_account_name: 'Padat Education',
+        bank_account_number: '1234567890',
+        bank_name: 'Maybank',
+      }),
+    ).resolves.toEqual({ id: 5, class_id: 10, bank_name: 'Maybank' });
+
+    expect(patch).toHaveBeenCalledWith('/classes/10/payment-setting', {
+      bank_account_name: 'Padat Education',
+      bank_account_number: '1234567890',
+      bank_name: 'Maybank',
+    });
+  });
+
+  it('uploads class payment QR code as multipart form data', async () => {
+    post.mockResolvedValue({
+      data: { data: { id: 5, class_id: 10, qr_code_path: 'qr-codes/class.png' } },
+    });
+
+    await expect(
+      adminApi.uploadClassPaymentQrCode(10, {
+        name: 'class-qr.png',
+        type: 'image/png',
+        uri: 'file:///class-qr.png',
+      }),
+    ).resolves.toEqual({ id: 5, class_id: 10, qr_code_path: 'qr-codes/class.png' });
+
+    expect(post).toHaveBeenCalledWith(
+      '/classes/10/payment-setting/qr-code',
+      expect.any(FormData),
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  });
+
   it('lists and adds participants for a class', async () => {
     get.mockResolvedValue({
       data: {
@@ -280,5 +345,41 @@ describe('adminApi', () => {
     expect(get).toHaveBeenNthCalledWith(2, '/admin/reports/payment-summary');
     expect(get).toHaveBeenNthCalledWith(3, '/admin/reports/outstanding');
     expect(get).toHaveBeenNthCalledWith(4, '/admin/reports/overdue');
+  });
+
+  it('uploads an organization logo as multipart form data', async () => {
+    post.mockResolvedValue({
+      data: { data: { id: 1, name: 'Padat School', logo_path: 'organization-logos/logo.png' } },
+    });
+
+    await expect(
+      adminApi.uploadOrganizationLogo(1, {
+        name: 'logo.png',
+        type: 'image/png',
+        uri: 'file:///logo.png',
+      }),
+    ).resolves.toEqual({
+      id: 1,
+      name: 'Padat School',
+      logo_path: 'organization-logos/logo.png',
+    });
+
+    expect(post).toHaveBeenCalledWith(
+      '/admin/organizations/1/logo',
+      expect.any(FormData),
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  });
+
+  it('retrieves an organization logo URL', async () => {
+    get.mockResolvedValue({
+      data: { data: { logo_url: 'https://classpay.padat.net/storage/organization-logos/logo.png' } },
+    });
+
+    await expect(adminApi.getOrganizationLogoUrl(1)).resolves.toBe(
+      'https://classpay.padat.net/storage/organization-logos/logo.png',
+    );
+
+    expect(get).toHaveBeenCalledWith('/admin/organizations/1/logo');
   });
 });
