@@ -114,7 +114,7 @@ function ClassRow({ classItem, onPress }: { classItem: AdminClass; onPress: () =
           <Ionicons color={colors.info} name="book" size={22} />
         </View>
         <View style={styles.copy}>
-          <Text numberOfLines={1} style={styles.name}>
+          <Text style={styles.name}>
             {classItem.name}
           </Text>
           <Text numberOfLines={1} style={styles.detail}>
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     width: 42,
   },
   copy: { flex: 1, gap: spacing.xxs },
-  name: { ...typography.label, color: colors.text },
+  name: { ...typography.label, color: colors.text, flexShrink: 1 },
   detail: { ...typography.caption, color: colors.mutedText },
   trailing: { alignItems: 'flex-end', gap: spacing.xs },
   status: {

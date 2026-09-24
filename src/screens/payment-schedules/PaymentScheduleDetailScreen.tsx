@@ -28,7 +28,7 @@ export function PaymentScheduleDetailScreen({
 }: PaymentScheduleDetailScreenProps) {
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const isSettled =
-    schedule.payment_status.toLowerCase() === 'paid' || schedule.status.toLowerCase() === 'paid';
+    schedule.payment_status?.toLowerCase() === 'paid' || schedule.status?.toLowerCase() === 'paid';
   const currency = schedule.currency ?? 'MYR';
 
   if (isCreatingPayment) {

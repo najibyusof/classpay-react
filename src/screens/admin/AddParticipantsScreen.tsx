@@ -24,7 +24,7 @@ export function AddParticipantsScreen({
   onViewPayments: (participantId: number | string) => void;
 }) {
   const queryClient = useQueryClient();
-  const [participantType, setParticipantType] = useState<'student' | 'sponsor'>('student');
+  const [selectedParticipantType, setSelectedParticipantType] = useState<'student' | 'sponsor'>('student');
   const [phone, setPhone] = useState('');
   const [searchedPhone, setSearchedPhone] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
@@ -41,6 +41,10 @@ export function AddParticipantsScreen({
     queryFn: () => adminApi.getClassParticipants(classId),
   });
   const participants = participantsQuery.data?.data ?? [];
+  const lockedParticipantType = participants
+    .map((participant) => normalizeParticipantType(participant.participant_type))
+    .find((type): type is 'student' | 'sponsor' => type !== undefined);
+  const participantType = lockedParticipantType ?? selectedParticipantType;
   const peopleQuery = useQuery({
     queryKey: ['admin', participantType, 'phone-search', searchedPhone],
     queryFn: () =>
@@ -152,24 +156,28 @@ export function AddParticipantsScreen({
       </View>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.tabs}>
-          <RoleTab
-            active={participantType === 'student'}
-            label="Students"
-            onPress={() => {
-              setParticipantType('student');
-              setSearchedPhone('');
-              setHasSearched(false);
-            }}
-          />
-          <RoleTab
-            active={participantType === 'sponsor'}
-            label="Sponsors"
-            onPress={() => {
-              setParticipantType('sponsor');
-              setSearchedPhone('');
-              setHasSearched(false);
-            }}
-          />
+          {!lockedParticipantType || participantType === 'student' ? (
+            <RoleTab
+              active={participantType === 'student'}
+              label="Students"
+              onPress={() => {
+                setSelectedParticipantType('student');
+                setSearchedPhone('');
+                setHasSearched(false);
+              }}
+            />
+          ) : null}
+          {!lockedParticipantType || participantType === 'sponsor' ? (
+            <RoleTab
+              active={participantType === 'sponsor'}
+              label="Sponsors"
+              onPress={() => {
+                setSelectedParticipantType('sponsor');
+                setSearchedPhone('');
+                setHasSearched(false);
+              }}
+            />
+          ) : null}
         </View>
         <Text style={styles.sectionTitle}>
           Add {participantType === 'student' ? 'Student' : 'Sponsor'}
@@ -295,6 +303,12 @@ export function AddParticipantsScreen({
       </Modal>
     </View>
   );
+}
+
+function normalizeParticipantType(value?: string | null) {
+  const normalized = value?.toLowerCase();
+  if (normalized === 'student' || normalized === 'sponsor') return normalized;
+  return undefined;
 }
 
 function RoleTab({

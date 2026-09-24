@@ -4,6 +4,7 @@ import type {
   PaymentHistoryFilters,
   PaymentHistoryResponse,
   PaymentSchedule,
+  StudentPaymentSetting,
   StudentClass,
   StudentOrganization,
   StudentPayment,
@@ -79,6 +80,12 @@ export const studentApi = {
     const { data } = await apiClient.get<PaymentSchedule | { data: PaymentSchedule }>(
       `/student/payment-schedules/${scheduleId}`,
     );
+    return 'data' in data ? data.data : data;
+  },
+  getClassPaymentSetting: async (classId: number | string): Promise<StudentPaymentSetting> => {
+    const { data } = await apiClient.get<
+      StudentPaymentSetting | { data: StudentPaymentSetting }
+    >(`/classes/${classId}/payment-setting`);
     return 'data' in data ? data.data : data;
   },
   getCurrentPaymentSchedule: async (): Promise<PaymentSchedule | null> => {

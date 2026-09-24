@@ -33,7 +33,7 @@ export function PaymentDetailScreen({
       : (payment.class?.name ?? 'Class unavailable');
   const currency = payment.currency ?? 'MYR';
   const organizationName = payment.organization?.name;
-  const paymentStatus = payment.status.toLowerCase();
+  const paymentStatus = payment.status?.toLowerCase() ?? '';
   const isPaid = paymentStatus === 'paid';
   const canDownloadReceipt = isPaid || paymentStatus === 'verified';
 

@@ -45,8 +45,10 @@ export function PaymentSummaryCard({
   );
 }
 
-function getStatusTone(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
-  const normalizedStatus = status.toLowerCase();
+function getStatusTone(
+  status: string | null | undefined,
+): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  const normalizedStatus = status?.toLowerCase() ?? '';
   if (normalizedStatus === 'paid' || normalizedStatus === 'completed') return 'success';
   if (normalizedStatus === 'overdue' || normalizedStatus === 'failed') return 'danger';
   if (normalizedStatus === 'pending' || normalizedStatus === 'due') return 'warning';

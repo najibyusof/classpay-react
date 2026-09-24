@@ -7,7 +7,7 @@ interface PaymentStatusBadgeProps {
 }
 
 export function PaymentStatusBadge({ status }: PaymentStatusBadgeProps) {
-  const normalizedStatus = status.toLowerCase();
+  const normalizedStatus = status?.toLowerCase() ?? '';
   const tone =
     normalizedStatus === 'paid'
       ? 'success'
@@ -21,5 +21,5 @@ export function PaymentStatusBadge({ status }: PaymentStatusBadgeProps) {
             ? 'info'
             : 'neutral';
 
-  return <StatusBadge label={status.replace(/_/g, ' ')} tone={tone} />;
+  return <StatusBadge label={status?.replace(/_/g, ' ') ?? 'Unknown'} tone={tone} />;
 }

@@ -20,6 +20,12 @@ export interface StudentClass {
   organization?: { id: number | string; name: string } | null;
 }
 
+export interface StudentPaymentSetting {
+  bank_name?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
+}
+
 export interface StudentOrganization {
   id: number | string;
   name: string;

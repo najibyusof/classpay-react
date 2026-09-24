@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { studentApi } from '../../api/studentApi';
 import { AppHeader, Button, Card, CurrencyText, ErrorState, Skeleton } from '../../components';
 import { colors, radius, spacing, typography } from '../../theme';
 import { normalizeApiError } from '../../types/api';
 import type { PaymentSchedule, StudentClass } from '../../types/student';
+import { environment } from '../../constants/environment';
 import { isTrustedHttpsUrl } from '../../utils/url';
 
 export function KodQrPembayaranScreen({
@@ -23,7 +25,14 @@ export function KodQrPembayaranScreen({
     queryKey: ['student', 'payment-schedules', schedule.id],
   });
   const detail = scheduleQuery.data ?? schedule;
-  const qrCodeUrl = qrCodeUrlFrom(detail);
+  const paymentSettingQuery = useQuery({
+    queryFn: () => studentApi.getClassPaymentSetting(classItem.id),
+    queryKey: ['student', 'classes', classItem.id, 'payment-setting'],
+  });
+  const paymentSetting = paymentSettingQuery.data;
+  const qrCodeUrl = paymentSetting
+    ? `${environment.apiBaseUrl}/classes/${classItem.id}/payment-setting/qr-code-file`
+    : qrCodeUrlFrom(detail);
   const currency = detail.currency ?? 'MYR';
 
   return (
@@ -52,13 +61,13 @@ export function KodQrPembayaranScreen({
           />
         </Card>
         {scheduleQuery.isLoading ? <Skeleton height={220} /> : null}
-        {scheduleQuery.isError ? (
+        {scheduleQuery.isError && paymentSettingQuery.isError ? (
           <ErrorState
             message={normalizeApiError(scheduleQuery.error).message}
             onRetry={() => void scheduleQuery.refetch()}
           />
         ) : null}
-        {!scheduleQuery.isLoading && !scheduleQuery.isError ? (
+        {!paymentSettingQuery.isLoading && (!paymentSettingQuery.isError || !scheduleQuery.isError) ? (
           <Card>
             <View style={styles.qrWrap}>
               {qrCodeUrl ? (
@@ -74,14 +83,27 @@ export function KodQrPembayaranScreen({
                 </View>
               )}
             </View>
-            {bankName(detail) ? (
-              <Text style={styles.bank}>{bankName(detail)}</Text>
+            {paymentSetting?.bank_name ?? bankName(detail) ? (
+              <Text style={styles.bank}>{paymentSetting?.bank_name ?? bankName(detail)}</Text>
             ) : null}
-            {accountNumber(detail) ? (
-              <View style={styles.accountRow}>
-                <Text style={styles.accountNumber}>{accountNumber(detail)}</Text>
+            {paymentSetting?.bank_account_number ?? accountNumber(detail) ? (
+              <Pressable
+                accessibilityLabel="Copy account number"
+                accessibilityRole="button"
+                onPress={() => {
+                  const value = paymentSetting?.bank_account_number ?? accountNumber(detail);
+                  if (!value) return;
+                  void Clipboard.setStringAsync(value).then(() =>
+                    Alert.alert('Copied', 'The account number was copied to the clipboard.'),
+                  );
+                }}
+                style={styles.accountRow}
+              >
+                <Text style={styles.accountNumber}>
+                  {paymentSetting?.bank_account_number ?? accountNumber(detail)}
+                </Text>
                 <Ionicons color={colors.mutedText} name="copy-outline" size={16} />
-              </View>
+              </Pressable>
             ) : null}
           </Card>
         ) : null}

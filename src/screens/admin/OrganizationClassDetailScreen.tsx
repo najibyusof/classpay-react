@@ -252,7 +252,7 @@ function ClassSummary({
     ['Day & Time', dayTime ?? '--'],
     ['Frequency', frequency ?? '--'],
     ['Payment Amount', paymentAmount ? `RM ${paymentAmount}` : '--'],
-    ['Participants', participants === undefined ? '--' : `${participants} Students`],
+    ['Participants', participants === undefined ? '--' : `${participants} Participants`],
     ['Bank Name', resolvedPaymentSetting?.bank_name ?? '--'],
     ['Account Name', resolvedPaymentSetting?.bank_account_name ?? '--'],
     ['Account Number', resolvedPaymentSetting?.bank_account_number ?? '--'],
@@ -264,7 +264,7 @@ function ClassSummary({
         <View style={styles.classIcon}>
           <Ionicons color={colors.info} name="school" size={24} />
         </View>
-        <Text numberOfLines={1} style={styles.className}>
+        <Text style={styles.className}>
           {classItem.name}
         </Text>
         <StatusBadge label={capitalize(status)} tone={status === 'active' ? 'success' : 'neutral'} />
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
   },
-  className: { ...typography.title, color: colors.text, flex: 1 },
+  className: { ...typography.title, color: colors.text, flex: 1, flexShrink: 1 },
   description: { ...typography.caption, color: colors.mutedText, marginTop: spacing.sm },
   details: {
     gap: spacing.xs,

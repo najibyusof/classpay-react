@@ -31,7 +31,7 @@ export function getScheduleSummary(schedules: readonly SponsorPaymentSchedule[])
   };
 }
 
-function isPaid(status: string): boolean {
-  const normalizedStatus = status.toLowerCase();
+function isPaid(status: string | null | undefined): boolean {
+  const normalizedStatus = status?.toLowerCase() ?? '';
   return normalizedStatus === 'paid' || normalizedStatus === 'completed';
 }

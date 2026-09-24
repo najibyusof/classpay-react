@@ -15,7 +15,7 @@ export function filterPaymentSchedules(
   classId: string,
 ): PaymentSchedule[] {
   return schedules.filter((schedule) => {
-    const matchesStatus = status === 'all' || schedule.status.toLowerCase() === status;
+    const matchesStatus = status === 'all' || schedule.status?.toLowerCase() === status;
     const matchesClass =
       classId === 'all' ||
       String(schedule.class && typeof schedule.class !== 'string' ? schedule.class.id : '') ===

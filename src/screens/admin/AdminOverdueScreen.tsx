@@ -324,7 +324,13 @@ function findParticipantPhone(
   if (!classId || !participantId || !participantsByClass) return undefined;
   const participant = participantsByClass
     .get(classId)
-    ?.data.find((entry) => isRecord(entry) && String(entry.id) === participantId);
+    ?.data.find((entry) => {
+      if (!isRecord(entry)) return false;
+      const user = isRecord(entry.user) ? entry.user : undefined;
+      return [entry.id, entry.user_id, user?.id].some(
+        (value) => stringValue(value) === participantId,
+      );
+    });
   return participant ? findPhone(participant) : undefined;
 }
 
@@ -334,10 +340,15 @@ function findScheduleParticipantPhone(
 ) {
   const classId = getRelatedId(item, 'class_id', 'class');
   const participantId = getRelatedId(item, 'class_participant_id', 'class_participant');
-  if (!classId || !participantId || !schedulesByClass) return undefined;
+  const scheduleId = stringValue(item.id);
+  if (!classId || (!participantId && !scheduleId) || !schedulesByClass) return undefined;
   const schedule = schedulesByClass.get(classId)?.find((entry) => {
     if (!isRecord(entry)) return false;
-    return String(entry.class_participant_id) === participantId;
+    const classParticipant = isRecord(entry.class_participant) ? entry.class_participant : undefined;
+    return [entry.id, entry.class_participant_id, classParticipant?.id].some((value) => {
+      const relatedId = stringValue(value);
+      return relatedId === participantId || relatedId === scheduleId;
+    });
   });
   if (!isRecord(schedule) || !isRecord(schedule.participant)) return undefined;
   return stringValue(schedule.participant.phone);
